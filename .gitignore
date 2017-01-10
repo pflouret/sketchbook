@@ -1,0 +1,13 @@
+*.pyc
+*.class
+
+examples/
+libraries/
+modes/
+screenshots/
+stuff/
+tools/
+build/
+
+.idea/
+.gradle/
