@@ -1,0 +1,11 @@
+*.pyc
+*.class
+
+examples/
+libraries/
+modes/
+screenshots/
+stuff/
+tools/
+
+src/.idea/workspace.xml
