@@ -1,0 +1,16 @@
+group 'io.github.pflouret'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile fileTree(dir: "lib", include: "**/*.jar")
+    //compile fileTree(dir: "../libraries", include: "**/*.jar")
+    //compile fileTree(dir: "/Applications/Processing.app/Contents/Java/core/library", include: "*.jar")
+}
