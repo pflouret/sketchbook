@@ -7,5 +7,6 @@ modes/
 screenshots/
 stuff/
 tools/
+build/
 
-src/.idea/workspace.xml
+src/*/.idea/workspace.xml
