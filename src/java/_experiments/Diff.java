@@ -8,11 +8,15 @@ import toxi.geom.ReadonlyVec2D;
 import toxi.geom.Vec2D;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Diff extends ProcessingApp {
 	private static final int N_NODES = 1000;
@@ -26,8 +30,7 @@ public class Diff extends ProcessingApp {
 
 		spatialIndex = new PointQuadtree(0, 0, width, height);
 
-		//List<Vec2D> vertices = new Circle(width / 2, height / 2, 10).toPolygon2D(10).vertices;
-		List<Vec2D> vertices = new Circle(0, 0, 10).toPolygon2D(10).vertices;
+		List<Vec2D> vertices = new Circle(0, 0, 10).toPolygon2D(30).vertices;
 		for (int i=0; i < vertices.size(); i++) {
 			nodes.add(new Node(vertices.get(i)));
 			nodes.addAdj(i, (i+1) % vertices.size());
@@ -60,28 +63,31 @@ public class Diff extends ProcessingApp {
 			drawEdge(e.getKey(), e.getValue());
 		});
 
-		noLoop();
+		//noLoop();
 
 		updateNodes();
 		popMatrix();
 	}
 
 	private void updateNodes() {
-		nodes.keySet().forEach(n -> n.scaleSelf(1.05f));
-		/*
-		for (Vec2D n : nodes) {
-			spatialIndex.itemsWithinRadius(n, 80, new ArrayList<>()).forEach(nn -> {
-				nn.set(nn.interpolateTo(n, 0.05f));
-			});
-			spatialIndex.itemsWithinRadius(n, 120, new ArrayList<>()).forEach(nn -> {
-				nn.set(nn.interpolateTo(n, -0.08f));
-			});
-		}
-		*/
+		nodes.keySet().forEach(n -> n.scaleSelf(1.02f));
+
+		nodes.keySet().stream()
+				.map(a -> new AbstractMap.SimpleEntry<Node, Node>(a, nodes.getFwdAdj(a)))
+				.filter(e -> e.getKey().distanceTo(e.getValue()) > 10)
+				.map(e -> new AbstractMap.SimpleEntry<Node, Node>(
+						new Node(e.getKey().add(e.getValue()).scale(0.5f)), e.getKey()))
+				.sorted((e1, e2) -> 0) // Buffer all results until now (hacky sink).
+				.forEachOrdered(e -> {
+					nodes.add(e.getKey());
+					nodes.modifyAdj(e.getValue(), e.getKey());
+					noLoop();
+				});
 	}
 
 	@Override
 	public void keyPressed() {
+		super.keyPressed();
 		redraw();
 	}
 
@@ -109,8 +115,8 @@ public class Diff extends ProcessingApp {
 	}
 
 	private static class Nodes extends AbstractMap<Node, Integer> {
-		private LinkedHashMap<Node, Integer> nodeToIndex = new LinkedHashMap<>(N_NODES);
-		private HashMap<Integer, Node> indexToNode = new HashMap<>(N_NODES);
+		LinkedHashMap<Node, Integer> nodeToIndex = new LinkedHashMap<>(N_NODES);
+		HashMap<Integer, Node> indexToNode = new HashMap<>(N_NODES);
 
 		// Adjacencies
 		int[] fwdAdj = new int[N_NODES];
@@ -161,6 +167,10 @@ public class Diff extends ProcessingApp {
 			adjSize++;
 		}
 
+		public void addAdj(Node from, Node to) {
+			addAdj(nodeToIndex.get(from), nodeToIndex.get(to));
+		}
+
 		public void modifyAdj(int from, int newFwdTo) {
 			assert from < newFwdTo && from < adjSize && newFwdTo < N_NODES;
 			int oldTo = fwdAdj[from];
@@ -171,9 +181,18 @@ public class Diff extends ProcessingApp {
 			adjSize++;
 		}
 
+		public void modifyAdj(Node from, Node newFwdTo) {
+			modifyAdj(nodeToIndex.get(from), nodeToIndex.get(newFwdTo));
+		}
+		/*
 		public int getFwdAdj(int nodeIndex) {
 			assert nodeIndex < adjSize;
 			return fwdAdj[nodeIndex];
+		}
+		*/
+
+		public Node getFwdAdj(Node a) {
+			return indexToNode.get(fwdAdj[nodeToIndex.get(a)]);
 		}
 
 		public int getReverseAdj(int nodeIndex) {
