@@ -7,48 +7,28 @@ import toxi.geom.PointQuadtree;
 import toxi.geom.ReadonlyVec2D;
 import toxi.geom.Vec2D;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class Diff extends ProcessingApp {
 	private static final int N_NODES = 1000;
 
-	private PointQuadtree spatialIndex;
 	private Nodes nodes = new Nodes();
+	private int initialNodes = 15;
+	private int growthDistance = 30;
 
 	@Override
 	public void setup() {
 		super.setup();
 
-		spatialIndex = new PointQuadtree(0, 0, width, height);
-
-		List<Vec2D> vertices = new Circle(0, 0, 10).toPolygon2D(30).vertices;
+		List<Vec2D> vertices = new Circle(0, 0, 10).toPolygon2D(initialNodes).vertices;
 		for (int i=0; i < vertices.size(); i++) {
 			nodes.add(new Node(vertices.get(i)));
 			nodes.addAdj(i, (i+1) % vertices.size());
 		}
-	}
-
-	public void drawNode(Node n) {
-		pushStyle();;
-		strokeWeight(4); stroke(0, 100); fill(0, 240);
-		ellipse(n.x, n.y, 4, 4);
-		popStyle();
-	}
-
-	public void drawEdge(Node a, Node b) {
-		pushStyle();
-		strokeWeight(1); stroke(255, 0, 0, 20); noFill();
-		line(a.x, a.y, b.x, b.y);
-		popStyle();
 	}
 
 	@Override
@@ -57,31 +37,50 @@ public class Diff extends ProcessingApp {
 
 		pushMatrix();
 		translate(width/2, height/2);
+		//translate(mouseX, mouseY);
 
-		nodes.nodeWithAdjIterator().forEachRemaining((e) -> {
-			drawNode(e.getKey());
-			drawEdge(e.getKey(), e.getValue());
+		nodes.stream().forEachOrdered(adj -> {
+			drawNode(adj.a);
+			drawEdge(adj);
 		});
-
-		//noLoop();
+		popMatrix();
 
 		updateNodes();
-		popMatrix();
+		//noLoop();
 	}
 
-	private void updateNodes() {
-		nodes.keySet().forEach(n -> n.scaleSelf(1.02f));
+	private void drawNode(Node n) {
+		pushStyle();;
+		strokeWeight(4); stroke(0, 100); fill(0, 240);
+		ellipse(n.x, n.y, 4, 4);
+		popStyle();
+	}
 
-		nodes.keySet().stream()
-				.map(a -> new AbstractMap.SimpleEntry<Node, Node>(a, nodes.getFwdAdj(a)))
-				.filter(e -> e.getKey().distanceTo(e.getValue()) > 10)
-				.map(e -> new AbstractMap.SimpleEntry<Node, Node>(
-						new Node(e.getKey().add(e.getValue()).scale(0.5f)), e.getKey()))
-				.sorted((e1, e2) -> 0) // Buffer all results until now (hacky sink).
-				.forEachOrdered(e -> {
-					nodes.add(e.getKey());
-					nodes.modifyAdj(e.getValue(), e.getKey());
-					noLoop();
+	private void drawEdge(Adj adj) {
+		pushStyle();
+		strokeWeight(1.5f); stroke(255, 0, 0, 50); noFill();
+		line(adj.a.x, adj.a.y, adj.b.x, adj.b.y);
+		popStyle();
+	}
+
+
+	private void updateNodes() {
+		nodes.stream().forEachOrdered(adj -> {
+			adj.a.scaleSelf(1.005f);
+			//adj.a.jitter(.1f);
+		});
+
+		if (nodes.size() >= N_NODES / 2) {
+			return;
+		}
+
+		nodes.stream()
+				.filter(adj -> adj.edgeLength() > growthDistance)
+				.map(adj -> new Adj(adj.a, adj.arcMidPoint()))
+				.sorted((j, k) -> 0) // Hack-ish buffer/sink to prevent concurrent modification.
+				.forEachOrdered(adj -> {
+					nodes.add(adj.b);
+					nodes.modifyAdj(adj.a, adj.b);
 				});
 	}
 
@@ -97,14 +96,14 @@ public class Diff extends ProcessingApp {
 	}
 
 
-	private static class Node extends Vec2D {
+	class Node extends Vec2D {
 		final Object hasher = new Object();
 
-		public Node(float x, float y) {
+		Node(float x, float y) {
 			super(x, y);
 		}
 
-		public Node(ReadonlyVec2D v) {
+		Node(ReadonlyVec2D v) {
 			super(v);
 		}
 
@@ -114,52 +113,60 @@ public class Diff extends ProcessingApp {
 		}
 	}
 
-	private static class Nodes extends AbstractMap<Node, Integer> {
+	class Adj {
+		Node a, b;
+
+		Adj(Node a, Node b) {
+			this.a = a;
+			this.b = b;
+		}
+
+		float edgeLength() {
+			return a.distanceTo(b);
+		}
+
+		Node arcMidPoint() {
+			float r = a.magnitude();
+			float theta = atan2(a.y+b.y, a.x+b.x);
+			return new Node(r*cos(theta), r*sin(theta));
+		}
+
+	}
+
+	class Nodes {
 		LinkedHashMap<Node, Integer> nodeToIndex = new LinkedHashMap<>(N_NODES);
 		HashMap<Integer, Node> indexToNode = new HashMap<>(N_NODES);
+		PointQuadtree spatialIndex;
+
+		Nodes() {
+			spatialIndex = new PointQuadtree(0, 0, width, height);
+		}
+
+		Stream<Adj> stream() {
+			return StreamSupport.stream(nodeToIndex.keySet().spliterator(), false)
+					.map(this::getFwdAdj);
+		}
 
 		// Adjacencies
 		int[] fwdAdj = new int[N_NODES];
 		int[] reverseAdj = new int[N_NODES];
 		int adjSize = 0;
 
-		@Override
-		public Set<Entry<Node, Integer>> entrySet() {
-			return nodeToIndex.entrySet();
-		}
-
-		public Iterator<Entry<Node, Node>> nodeWithAdjIterator() {
-			return new Iterator<Entry<Node, Node>>() {
-				Iterator<Node> iter = nodeToIndex.keySet().iterator();
-
-				@Override
-				public boolean hasNext() {
-					return iter.hasNext();
-				}
-
-				@Override
-				public Entry<Node, Node> next() {
-					Node n = iter.next();
-					return new SimpleEntry<>(n, indexToNode.get(fwdAdj[nodeToIndex.get(n)]));
-				}
-			};
-		}
-
-		public void add(Node node) {
+		void add(Node node) {
 			int i = nodeToIndex.size();
 			nodeToIndex.put(node, i);
 			indexToNode.put(i, node);
 		}
 
-		public Node getNode(int index) {
+		Node getNode(int index) {
 			return indexToNode.get(index);
 		}
 
-		public Integer getIndex(Node node) {
+		Integer getIndex(Node node) {
 			return nodeToIndex.get(node);
 		}
 
-		public void addAdj(int from, int to) {
+		void addAdj(int from, int to) {
 			assert from < N_NODES && to < N_NODES;
 
 			fwdAdj[from] = to;
@@ -167,11 +174,11 @@ public class Diff extends ProcessingApp {
 			adjSize++;
 		}
 
-		public void addAdj(Node from, Node to) {
+		void addAdj(Node from, Node to) {
 			addAdj(nodeToIndex.get(from), nodeToIndex.get(to));
 		}
 
-		public void modifyAdj(int from, int newFwdTo) {
+		void modifyAdj(int from, int newFwdTo) {
 			assert from < newFwdTo && from < adjSize && newFwdTo < N_NODES;
 			int oldTo = fwdAdj[from];
 			fwdAdj[from] = newFwdTo;
@@ -181,68 +188,22 @@ public class Diff extends ProcessingApp {
 			adjSize++;
 		}
 
-		public void modifyAdj(Node from, Node newFwdTo) {
+		void modifyAdj(Node from, Node newFwdTo) {
 			modifyAdj(nodeToIndex.get(from), nodeToIndex.get(newFwdTo));
 		}
-		/*
-		public int getFwdAdj(int nodeIndex) {
-			assert nodeIndex < adjSize;
-			return fwdAdj[nodeIndex];
-		}
-		*/
 
-		public Node getFwdAdj(Node a) {
-			return indexToNode.get(fwdAdj[nodeToIndex.get(a)]);
+		Adj getFwdAdj(Node a) {
+			return new Adj(a, indexToNode.get(fwdAdj[nodeToIndex.get(a)]));
 		}
 
-		public int getReverseAdj(int nodeIndex) {
-			assert nodeIndex < adjSize;
-			return reverseAdj[nodeIndex];
+		Adj getReverseAdj(Node a) {
+			return new Adj(indexToNode.get(reverseAdj[nodeToIndex.get(a)]), a);
+		}
+
+		int size() {
+			return nodeToIndex.size();
 		}
 	}
-
-	/*
-	private static class TwoCycleGraphAdjacencies {
-		int[] fwd;
-		int[] reverse;
-		int capacity;
-		int size = 0;
-
-		public TwoCycleGraphAdjacencies(int capacity) {
-			fwd = new int[capacity];
-			reverse = new int[capacity];
-			this.capacity = capacity;
-		}
-
-		public void add(int from, int to) {
-			assert from < capacity && to < capacity;
-
-			fwd[from] = to;
-			reverse[to] = from;
-			size++;
-		}
-
-		public void newAdj(int from, int fwdTo) {
-			assert from < fwdTo && from < size && fwdTo < capacity;
-			int oldTo = fwd[from];
-			fwd[from] = fwdTo;
-			fwd[fwdTo] = oldTo;
-			reverse[oldTo] = fwdTo;
-			reverse[fwdTo] = from;
-			size++;
-		}
-
-		public int getFwd(int nodeIndex) {
-			assert nodeIndex < size;
-			return fwd[nodeIndex];
-		}
-
-		public int getReverse(int nodeIndex) {
-			assert nodeIndex < size;
-			return reverse[nodeIndex];
-		}
-	}
-	*/
 
 	public static void main(String[] args) {
 		PApplet.main("_experiments.Diff");
