@@ -7,6 +7,7 @@ import toxi.geom.PointQuadtree;
 import toxi.geom.ReadonlyVec2D;
 import toxi.geom.Vec2D;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,15 +17,18 @@ import java.util.stream.StreamSupport;
 public class Diff extends ProcessingApp {
 	private static final int N_NODES = 1000;
 
-	private Nodes nodes = new Nodes();
-	private int initialNodes = 15;
-	private int growthDistance = 30;
+	private Nodes nodes;
+	private int initialNodes = 3;
+	private int growthDistance = 60;
+	private int attractionRadius = 100;
+	private int repulsionRadius = 140;
 
 	@Override
 	public void setup() {
 		super.setup();
+		nodes = new Nodes();
 
-		List<Vec2D> vertices = new Circle(0, 0, 10).toPolygon2D(initialNodes).vertices;
+		List<Vec2D> vertices = new Circle(0, 0, 50).toPolygon2D(initialNodes).vertices;
 		for (int i=0; i < vertices.size(); i++) {
 			nodes.add(new Node(vertices.get(i)));
 			nodes.addAdj(i, (i+1) % vertices.size());
@@ -42,32 +46,52 @@ public class Diff extends ProcessingApp {
 		nodes.stream().forEachOrdered(adj -> {
 			drawNode(adj.a);
 			drawEdge(adj);
+			drawNeighborEdges(adj.a);
 		});
 		popMatrix();
 
 		updateNodes();
-		//noLoop();
+		noLoop();
 	}
 
-	private void drawNode(Node n) {
+	private void drawNode(Node a) {
 		pushStyle();;
 		strokeWeight(4); stroke(0, 100); fill(0, 240);
-		ellipse(n.x, n.y, 4, 4);
+		ellipse(a.x, a.y, 4, 4);
 		popStyle();
 	}
 
 	private void drawEdge(Adj adj) {
 		pushStyle();
-		strokeWeight(1.5f); stroke(255, 0, 0, 50); noFill();
+		strokeWeight(1.5f); stroke(0, 0, 255, 50); noFill();
 		line(adj.a.x, adj.a.y, adj.b.x, adj.b.y);
+		popStyle();
+	}
+
+	private void drawNeighborEdges(Node a) {
+		pushStyle();
+		strokeWeight(1.2f); stroke(0, 255, 0, 30); noFill();
+
+		nodes.spatialIndex.itemsWithinRadius(a, attractionRadius, new ArrayList<>()).forEach(b -> {
+			line(a.x, a.y, b.x, b.y);
+		});
+		/*
+		stroke(255, 0, 0, 30);
+		nodes.spatialIndex.itemsWithinRadius(a, repulsionRadius, new ArrayList<>()).forEach(b -> {
+			line(a.x, a.y, b.x, b.y);
+		});
+		*/
 		popStyle();
 	}
 
 
 	private void updateNodes() {
+		if (stop) {
+			return;
+		}
+
 		nodes.stream().forEachOrdered(adj -> {
-			adj.a.scaleSelf(1.005f);
-			//adj.a.jitter(.1f);
+			nodes.spatialIndex.reindex(new Node(adj.a), adj.a.scaleSelf(1.02f));
 		});
 
 		if (nodes.size() >= N_NODES / 2) {
@@ -77,17 +101,19 @@ public class Diff extends ProcessingApp {
 		nodes.stream()
 				.filter(adj -> adj.edgeLength() > growthDistance)
 				.map(adj -> new Adj(adj.a, adj.arcMidPoint()))
-				.sorted((j, k) -> 0) // Hack-ish buffer/sink to prevent concurrent modification.
+				.sorted((p, q) -> 0) // Hack-ish buffer/sink to prevent concurrent modification.
 				.forEachOrdered(adj -> {
 					nodes.add(adj.b);
 					nodes.modifyAdj(adj.a, adj.b);
 				});
 	}
 
+	boolean stop = false;
 	@Override
 	public void keyPressed() {
 		super.keyPressed();
 		redraw();
+		stop = !stop;
 	}
 
 	@Override
@@ -97,7 +123,7 @@ public class Diff extends ProcessingApp {
 
 
 	class Node extends Vec2D {
-		final Object hasher = new Object();
+		Object hasher = new Object();
 
 		Node(float x, float y) {
 			super(x, y);
@@ -105,6 +131,11 @@ public class Diff extends ProcessingApp {
 
 		Node(ReadonlyVec2D v) {
 			super(v);
+		}
+
+		Node(Node a) {
+			super(a.x, a.y);
+			hasher = a.hasher;
 		}
 
 		@Override
@@ -136,10 +167,10 @@ public class Diff extends ProcessingApp {
 	class Nodes {
 		LinkedHashMap<Node, Integer> nodeToIndex = new LinkedHashMap<>(N_NODES);
 		HashMap<Integer, Node> indexToNode = new HashMap<>(N_NODES);
-		PointQuadtree spatialIndex;
+		Quadtree spatialIndex;
 
 		Nodes() {
-			spatialIndex = new PointQuadtree(0, 0, width, height);
+			spatialIndex = new Quadtree(-width, -height, 2*width, 2*height);
 		}
 
 		Stream<Adj> stream() {
@@ -156,6 +187,7 @@ public class Diff extends ProcessingApp {
 			int i = nodeToIndex.size();
 			nodeToIndex.put(node, i);
 			indexToNode.put(i, node);
+			spatialIndex.index(node);
 		}
 
 		Node getNode(int index) {
@@ -202,6 +234,25 @@ public class Diff extends ProcessingApp {
 
 		int size() {
 			return nodeToIndex.size();
+		}
+	}
+
+	class Quadtree extends PointQuadtree {
+		public Quadtree(float x, float y, float w, float h) {
+			super(x, y, w, h);
+		}
+
+		public boolean containsPoint(ReadonlyVec2D p) {
+			// https://bitbucket.org/postspectacular/toxiclibs/issues/43/toxigeomrectcontainspoint-readonlyvec2d-p
+
+			float px = p.x();
+			float py = p.y();
+			if (px < x || px > x + width) {
+				return false;
+			} else if (py < y || py > y + height) {
+				return false;
+			}
+			return true;
 		}
 	}
 
