@@ -18,10 +18,10 @@ public class Diff extends ProcessingApp {
 	private static final int N_NODES = 1000;
 
 	private Nodes nodes;
-	private int initialNodes = 3;
-	private int growthDistance = 60;
-	private int attractionRadius = 100;
-	private int repulsionRadius = 140;
+	private int initialNodes = 10;
+	private int growthDistance = 100;
+	private int attractionRadius = 140;
+	private int repulsionRadius = 100;
 
 	@Override
 	public void setup() {
@@ -75,24 +75,46 @@ public class Diff extends ProcessingApp {
 		nodes.spatialIndex.itemsWithinRadius(a, attractionRadius, new ArrayList<>()).forEach(b -> {
 			line(a.x, a.y, b.x, b.y);
 		});
-		/*
 		stroke(255, 0, 0, 30);
 		nodes.spatialIndex.itemsWithinRadius(a, repulsionRadius, new ArrayList<>()).forEach(b -> {
 			line(a.x, a.y, b.x, b.y);
 		});
-		*/
 		popStyle();
 	}
 
 
 	private void updateNodes() {
-		if (stop) {
-			return;
-		}
+		nodes.stream()
+				.filter(adj -> adj.edgeLength() > 20)
+				.forEachOrdered(adj -> {
+					Node copy = new Node(adj.b);
+					adj.b.set(adj.b.interpolateTo(adj.a, 0.005f));
+					nodes.spatialIndex.reindex(copy, adj.b);
+			/*
+			nodes.spatialIndex.itemsWithinRadius(adj.a, attractionRadius, new ArrayList<>())
+					.stream()
+					.forEach(b -> {
+						Node copy = new Node(b);
+						b.set(b.interpolateTo(adj.a, 0.02f));
+						nodes.spatialIndex.reindex(copy, b);
+					});
+					*/
+		});
 
+		nodes.stream().forEachOrdered(adj -> {
+			nodes.spatialIndex.itemsWithinRadius(adj.a, repulsionRadius, new ArrayList<>())
+					.forEach(b -> {
+						Node copy = new Node(b);
+						b.set(b.interpolateTo(adj.a, -0.01f));
+						nodes.spatialIndex.reindex(copy, b);
+					});
+		});
+
+		/*
 		nodes.stream().forEachOrdered(adj -> {
 			nodes.spatialIndex.reindex(new Node(adj.a), adj.a.scaleSelf(1.02f));
 		});
+		*/
 
 		if (nodes.size() >= N_NODES / 2) {
 			return;
@@ -103,17 +125,17 @@ public class Diff extends ProcessingApp {
 				.map(adj -> new Adj(adj.a, adj.arcMidPoint()))
 				.sorted((p, q) -> 0) // Hack-ish buffer/sink to prevent concurrent modification.
 				.forEachOrdered(adj -> {
-					nodes.add(adj.b);
-					nodes.modifyAdj(adj.a, adj.b);
+					if (random(1) < 0.5) {
+						nodes.add(adj.b);
+						nodes.modifyAdj(adj.a, adj.b);
+					}
 				});
 	}
 
-	boolean stop = false;
 	@Override
 	public void keyPressed() {
 		super.keyPressed();
 		redraw();
-		stop = !stop;
 	}
 
 	@Override
