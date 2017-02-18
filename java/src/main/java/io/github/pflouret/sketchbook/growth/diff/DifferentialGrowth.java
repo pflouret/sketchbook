@@ -65,36 +65,28 @@ public class DifferentialGrowth extends ProcessingApp {
 
     private void update() {
         float repulsionRadius = 25;
-        float nearDistance = 10;
-        float splitDistance = 10;
+        float nearDistance = 12;
+        float splitDistance = 8;
         float splitRandomness = 0.2f;
-        float attractionForce = 0f;
+        float attractionForce = 0.05f;
 
         vertices.forEach(a -> {
             vertices.stream()
-                .filter(b -> b != a)
+                .filter(b -> b != a && b != a.prev && b != a.next && a.distanceTo(b) < repulsionRadius)
                 .forEach(b -> {
-                    if (b == a.prev || b == b.next) {
-                        if (a.distanceTo(b) > nearDistance) {
-                            a.set(lerp(a.x, b.x, attractionForce), lerp(a.y, b.y, attractionForce));
-                        }
-                    } else {
-                        float d2 = a.distanceToSquared(b);
-                        if (b != a && d2 < repulsionRadius*repulsionRadius) {
-                            a.set(lerp(a.x, b.x, -1/d2), lerp(a.y, b.y, -1/d2));
-                        }
-                    }
+                    float d2 = a.distanceToSquared(b);
+                    a.set(lerp(a.x, b.x, -1/d2), lerp(a.y, b.y, -1/d2));
                 });
+            Node v = vertices.firstElement();
+            do {
+                if (a.distanceTo(a.prev) < nearDistance) {
+                    a.set(lerp(a.x, a.prev.x, attractionForce), lerp(a.y, a.prev.y, attractionForce));
+                }
+                if (a.distanceTo(a.next) < nearDistance) {
+                    a.set(lerp(a.x, a.next.x, attractionForce), lerp(a.y, a.next.y, attractionForce));
+                }
+            } while ((v = v.next) != vertices.firstElement());
         });
-
-        /*
-        quadtree.itemsWithinRadius(a, repulsionRadius, new ArrayList<>()).stream()
-            .filter(b -> b != a && b != a.prev && b != a.next)
-            .forEach(b -> {
-                float f = -1/a.distanceToSquared(b);
-                quadtree.reindex(a.copy(), a.set(lerp(a.x, b.x, f), lerp(a.y, b.y, f)));
-            });
-            */
 
         for (int i=0; i < vertices.size(); i++) {
             Node a = vertices.get(i);
