@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    compile 'org.jbox2d:jbox2d-library:2.2.1.1'
     compile fileTree(dir: "lib", include: "**/*.jar")
     //compile fileTree(dir: "../libraries", include: "**/*.jar")
     //compile fileTree(dir: "/Applications/Processing.app/Contents/Java/core/library", include: "*.jar")
