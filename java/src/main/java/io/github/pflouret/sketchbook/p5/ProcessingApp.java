@@ -37,6 +37,8 @@ public class ProcessingApp extends PApplet {
     public void setup() {
         super.setup();
 
+        clear();
+
         surface.setResizable(true);
         surface.setTitle("");
         noFill();
@@ -115,7 +117,7 @@ public class ProcessingApp extends PApplet {
                 clear();
                 break;
             case 'R':
-                reset();
+                setup();
                 break;
             case 'p':
                 toggleLoop();
