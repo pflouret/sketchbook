@@ -11,6 +11,8 @@ import toxi.physics2d.VerletPhysics2D;
 import toxi.physics2d.behaviors.ParticleBehavior2D;
 import toxi.processing.ToxiclibsSupport;
 
+import java.lang.invoke.MethodHandles;
+
 public class Verlet extends PApplet {
     private VerletPhysics2D ph = new VerletPhysics2D();
     private Circle circle;
@@ -126,7 +128,5 @@ public class Verlet extends PApplet {
         }
     }
 
-    public static void main(String[] args) {
-        PApplet.main("_experiments.verlet.Verlet");
-    }
+    public static void main(String[] args) { PApplet.main(MethodHandles.lookup().lookupClass()); }
 }

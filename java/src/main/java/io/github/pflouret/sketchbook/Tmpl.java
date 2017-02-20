@@ -15,8 +15,6 @@ public class Tmpl extends ProcessingApp {
     public void draw() {
     }
 
-    public static void main(String[] args) {
-        PApplet.main(MethodHandles.lookup().lookupClass());
-    }
+    public static void main(String[] args) { PApplet.main(MethodHandles.lookup().lookupClass()); }
 }
 

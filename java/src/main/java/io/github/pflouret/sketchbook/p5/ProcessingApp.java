@@ -50,12 +50,25 @@ public class ProcessingApp extends PApplet {
         h2 = height / 2;
     }
 
-    public PVector v(float x, float y) {
-        return new PVector(x, y);
+    public PVec pv(float x, float y) {
+        return new PVec(x, y);
+    }
+    public TVec tv(float x, float y) {
+        return new TVec(x, y);
     }
 
     public void pr(Object... args) {
         println(String.join(" ", Stream.of(args).map(Object::toString).collect(Collectors.toList())));
+    }
+
+    public void push() {
+        pushMatrix();
+        pushStyle();
+    }
+
+    public void pop() {
+        popStyle();
+        popMatrix();
     }
 
     public void clear() {

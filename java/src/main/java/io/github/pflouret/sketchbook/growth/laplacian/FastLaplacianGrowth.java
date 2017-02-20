@@ -25,7 +25,7 @@ public class FastLaplacianGrowth extends ProcessingApp {
     private static final int ITERATIONS = 100;
 
     private void init() {
-        PVector initialCharge = v(w2, h2);
+        PVector initialCharge = new PVector(w2, h2);
         charges.add(initialCharge);
         addCandidates(initialCharge);
         //noLoop();
@@ -73,7 +73,7 @@ public class FastLaplacianGrowth extends ProcessingApp {
         IntStream.of(-1, 0, 1).parallel().forEach(i -> {
             IntStream.of(-1, 0, 1)
                 .parallel()
-                .mapToObj(j -> v(charge.x+i*R, charge.y+j*R))
+                .mapToObj(j -> new PVector(charge.x+i*R, charge.y+j*R))
                 .filter(v -> !charges.contains(v) && !candidates.containsKey(v))
                 .forEach(v -> candidates.put(v, potential(v)));
         });
