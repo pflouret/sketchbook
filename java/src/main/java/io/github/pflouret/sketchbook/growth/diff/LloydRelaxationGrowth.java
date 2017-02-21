@@ -19,16 +19,20 @@ public class LloydRelaxationGrowth extends ProcessingApp {
     private Map<TVertex, TVertex> vertices;
     private PolygonClipper2D clipper;
 
-    private float splitDistance = 20;
+    private float splitDistance = 2;
     private float splitRandomness = 1;
+    private boolean drawVoronoi = true;
 
     private DelaunayTriangle initialTriangle = new DelaunayTriangle(
         new DelaunayVertex(-50000, -50000), new DelaunayVertex(50000, -50000), new DelaunayVertex(0, 50000));
     private DelaunayTriangulation delaunay;
 
     private void rebuildTriangulation() {
-        delaunay =  new DelaunayTriangulation(initialTriangle);
-        vertices.keySet().stream().map(v -> new DelaunayVertex(v.x, v.y)).forEach(delaunay::delaunayPlace);
+        try {
+            delaunay = new DelaunayTriangulation(initialTriangle);
+            vertices.keySet().stream().map(v -> new DelaunayVertex(v.x, v.y)).forEach(delaunay::delaunayPlace);
+        } catch (Exception e) {
+        }
     }
 
     private void relaxVertices() {
@@ -45,7 +49,18 @@ public class LloydRelaxationGrowth extends ProcessingApp {
                     TVec v = tv((float) site.coord(0), (float) site.coord(1));
                     Vec2D centroid = clipper.clipPolygon(region).getCentroid();
                     TVertex vertex = vertices.remove(v);
-                    vertex.set(centroid);
+                    vertex.interpolateToSelf(centroid, 0.01f);
+                    //vertex.set(centroid);
+                    if (drawVoronoi) {
+                        push();
+                        strokeWeight(5);
+                        stroke(255, 0, 0);
+                        point(centroid);
+                        strokeWeight(1);
+                        stroke(255, 0, 0, 100);
+                        gfx.polygon2D(region);
+                        pop();
+                    }
                     vertices.put(vertex, vertex);
                 }
             }
@@ -55,12 +70,12 @@ public class LloydRelaxationGrowth extends ProcessingApp {
     @Override
     public void setup() {
         super.setup();
-        fill(0);
+        //fill(0);
 
         vertices = new LinkedHashMap<>(5000);
         clipper = new SutherlandHodgemanClipper(new Rect(0, 0, width, height));
 
-        int r = 20, n = 30;
+        int r = 10, n = 5;
         TVertex prev = null, first = null;
         for (Vec2D v : new Circle(w2, h2, r).toPolygon2D(n).vertices) {
             TVertex vx = new TVertex(v);
@@ -82,7 +97,7 @@ public class LloydRelaxationGrowth extends ProcessingApp {
     private void update() {
         relaxVertices();
         rebuildTriangulation();
-        resample();
+        //resample();
     }
 
     private void resample() {
@@ -110,18 +125,27 @@ public class LloydRelaxationGrowth extends ProcessingApp {
         curveVertex(first.prev.x, first.prev.y);
         TVertex v = first;
         do {
-            /*
             pushStyle();
             strokeWeight(3);
             point(v.x, v.y);
             popStyle();
-            */
             curveVertex(v.x, v.y);
         } while ((v = v.next) != first);
 
         curveVertex(first.x, first.y);
         curveVertex(first.next.x, first.next.y);
         endShape();
+    }
+
+    @Override
+    public void keyPressed() {
+        super.keyPressed();
+        if (key == 'r') {
+            resample();
+        } else if (key == 'v') {
+            drawVoronoi = !drawVoronoi;
+        }
+        redraw();
     }
 
     public static void main(String[] args) { PApplet.main(MethodHandles.lookup().lookupClass()); }
