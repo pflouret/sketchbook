@@ -4,6 +4,7 @@ import controlP5.ControlP5;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PVector;
+import toxi.geom.Vec2D;
 import toxi.processing.ToxiclibsSupport;
 
 import java.io.File;
@@ -70,6 +71,9 @@ public class ProcessingApp extends PApplet {
         popStyle();
         popMatrix();
     }
+
+    public void point(PVector p) { point(p.x, p.y); }
+    public void point(Vec2D p) { point(p.x, p.y); }
 
     public void clear() {
         background(bgColor);
