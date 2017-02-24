@@ -108,13 +108,13 @@ public class ProcessingApp extends PApplet {
 
     public void screenshot(PGraphics g) {
         String sketchPath = sketchPath();
-        File folder = new File("~/code/sketchbook/screenshots");
+        File folder = new File("/Users/pflouret/code/sketchbook/screenshots");
         folder.mkdirs();
 
         String filename = String.format("%s_####.png",
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss")));
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")));
 
-        Path sketchName = FileSystems.getDefault().getPath(sketchPath).getFileName();
+        Path sketchName = FileSystems.getDefault().getPath(this.getClass().getSimpleName().toLowerCase());
         String path = folder.toPath()
             .resolve(sketchName)
             .resolve(filename)
