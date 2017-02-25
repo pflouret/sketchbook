@@ -143,7 +143,7 @@ public class ProcessingApp extends PApplet {
             case 'c':
                 clear(); break;
             case 'R':
-                setup(); break;
+                reset(); break;
             case 'p':
                 toggleLoop(); break;
             case 'S':
