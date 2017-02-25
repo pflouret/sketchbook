@@ -13,3 +13,7 @@
 #### HYPE framework
 <http://www.hypeframework.org><br>
 <https://github.com/hype/HYPE_Processing>
+
+#### VideoExport
+<http://funprogramming.org/VideoExport-for-Processing/><br>
+<https://github.com/hamoid/video_export_processing>

@@ -1,5 +1,6 @@
 package io.github.pflouret.sketchbook.p5;
 
+import com.hamoid.VideoExport;
 import controlP5.ControlP5;
 import processing.core.PApplet;
 import processing.core.PGraphics;
@@ -107,20 +108,29 @@ public class ProcessingApp extends PApplet {
     }
 
     public void screenshot(PGraphics g) {
-        String sketchPath = sketchPath();
+        saveFrame(getSketchFilename("%s_####.png"));
+    }
+
+    public VideoExport getVideoExporter() {
+        VideoExport video = new VideoExport(this, getSketchFilename("%s.mp4"));
+        video.setFrameRate(60);
+        video.dontSaveDebugInfo();
+        return video;
+    }
+
+    public String getSketchFilename(String format) {
         File folder = new File("/Users/pflouret/code/sketchbook/screenshots");
         folder.mkdirs();
 
-        String filename = String.format("%s_####.png",
+        String filename = String.format(format,
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")));
 
         Path sketchName = FileSystems.getDefault().getPath(this.getClass().getSimpleName().toLowerCase());
-        String path = folder.toPath()
+        return folder.toPath()
             .resolve(sketchName)
             .resolve(filename)
             .toAbsolutePath()
             .toString();
-        saveFrame(path);
     }
 
     public void screenshot() {
@@ -131,20 +141,15 @@ public class ProcessingApp extends PApplet {
     public void keyPressed() {
         switch (key) {
             case 'c':
-                clear();
-                break;
+                clear(); break;
             case 'R':
-                setup();
-                break;
+                setup(); break;
             case 'p':
-                toggleLoop();
-                break;
+                toggleLoop(); break;
             case 'S':
-                screenshot();
-                break;
+                screenshot(); break;
             case 'h':
-                toggleGuiVisibility();
-                break;
+                toggleGuiVisibility(); break;
             default:
         }
 
