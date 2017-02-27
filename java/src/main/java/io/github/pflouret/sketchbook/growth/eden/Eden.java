@@ -14,8 +14,8 @@ import java.util.stream.IntStream;
 public class Eden extends ProcessingApp {
 
     private int maxNeighbors = 8;
-    private int r = 15;
-    private int iterations = 20;
+    private int r = 2;
+    private int iterations = 200;
 
     private Particle[][] lattice;
     private Vector<Particle> living;
@@ -102,8 +102,8 @@ public class Eden extends ProcessingApp {
         super.setup();
 
         clear();
-        stroke(0, 100);
-        strokeWeight(4);
+        stroke(0, 1);
+        strokeWeight(1.5f);
 
         reset();
     }
@@ -241,14 +241,13 @@ public class Eden extends ProcessingApp {
     @Override
     public void draw() {
         IntStream.range(0, iterations).forEach(i -> update());
-        clear();
+        //clear();
+        living.forEach(p -> point(p.x, p.y));
         /*
         drawBranches(lattice[w2][h2], 1, 0);
-        living.forEach(p -> point(p.x, p.y));
         if (frameCount % 5 == 0) {
         }
         drawParticles(lattice[w2][h2]);
-        */
         strokeWeight(2);
         for (int y=0; y < lattice.length; y++) {
             for (int x=0; x < lattice[y].length; x++) {
@@ -257,6 +256,7 @@ public class Eden extends ProcessingApp {
                 }
             }
         }
+        */
         //println(living.size() + " " + particles.size());
     }
 }
