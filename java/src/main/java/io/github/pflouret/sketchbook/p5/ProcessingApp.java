@@ -119,15 +119,14 @@ public class ProcessingApp extends PApplet {
     }
 
     public String getSketchFilename(String format) {
-        File folder = new File("/Users/pflouret/code/sketchbook/screenshots");
+        String sketchName = this.getClass().getSimpleName().toLowerCase();
+        File folder = new File("/Users/pflouret/code/sketchbook/screenshots/" + sketchName);
         folder.mkdirs();
 
         String filename = String.format(format,
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")));
 
-        Path sketchName = FileSystems.getDefault().getPath(this.getClass().getSimpleName().toLowerCase());
         return folder.toPath()
-            .resolve(sketchName)
             .resolve(filename)
             .toAbsolutePath()
             .toString();
