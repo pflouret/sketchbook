@@ -1,5 +1,6 @@
 package io.github.pflouret.sketchbook.lines;
 
+import com.hamoid.VideoExport;
 import controlP5.ControlP5;
 import controlP5.Group;
 import io.github.pflouret.sketchbook.p5.NoiseWave;
@@ -26,6 +27,8 @@ public class OffsetStripes extends ProcessingApp {
     private List<LinkedList<PVec>> curves;
     private List<PShape> shapes;
 
+    private VideoExport video;
+
     @Override
     public void settings() {
         size(800, 800, P2D);
@@ -44,7 +47,6 @@ public class OffsetStripes extends ProcessingApp {
         reset();
 
         new ControlFrame(this, 300, 150);
-
     }
 
     @Override
@@ -107,12 +109,16 @@ public class OffsetStripes extends ProcessingApp {
         clear();
 
         if (looping) {
-            textureOffset = (frameCount/20.0f) % 2*stripeWidth;
+            textureOffset = frameCount/2.0f;
         }
 
         buildShapes();
 
         shapes.forEach(this::shape);
+
+        if (video != null) {
+            video.saveFrame();
+        }
     }
 
     @Override
@@ -121,6 +127,17 @@ public class OffsetStripes extends ProcessingApp {
             case 'R':
                 reset();
                 redraw();
+                break;
+            case 'v':
+                if (video == null) {
+                    video = getVideoExporter();
+                    video.startMovie();
+                    pr("movie started");
+                } else {
+                    video.endMovie();
+                    video = null;
+                    pr("movie ended");
+                }
                 break;
             default:
                 super.keyPressed(); break;
@@ -156,17 +173,42 @@ public class OffsetStripes extends ProcessingApp {
 
         public void setup() {
             cp = new ControlP5(this);
+
             Group g1 = cp.addGroup("g1");
-            cp.addSlider("stripeWidth")
+
+            int stripeWidth = ((OffsetStripes) parent).stripeWidth;
+            cp.addSlider("stripe width")
                 .setRange(1, 15)
                 .setNumberOfTickMarks(15)
                 .setSize(200, 30)
-                .setPosition(0, 0)
+                .setPosition(5, 5)
                 .setGroup(g1)
-                .setValue(((OffsetStripes)parent).stripeWidth)
+                .setValue(stripeWidth)
                 .plugTo(parent, "stripeWidth")
             ;
-                pr(((OffsetStripes)parent).stripeWidth);
+
+            cp.addSlider("texture offset")
+                .setRange(1, 30)
+                .setSize(200, 30)
+                .setPosition(5, 46)
+                .setGroup(g1)
+                .setValue(((OffsetStripes)parent).textureOffset)
+                .plugTo(parent, "textureOffset")
+            ;
+
+            cp.addBang("reset")
+                .setPosition(5, 81)
+                .setSize(20, 20)
+                .setGroup(g1)
+                .plugTo(parent, "reset")
+            ;
+
+            cp.addBang("reset offset")
+                .setPosition(35, 81)
+                .setSize(20, 20)
+                .setGroup(g1)
+                .onClick(e -> ((OffsetStripes)parent).textureOffset = stripeWidth)
+            ;
 
             cp.addListener(e ->
                 parent.postEvent(new MouseEvent(parent, 0, MouseEvent.CLICK, 0, -1, -1, -1, 1)));//, '!', Character.getNumericValue('!')));
