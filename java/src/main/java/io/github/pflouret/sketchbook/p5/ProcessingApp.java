@@ -120,7 +120,7 @@ public class ProcessingApp extends PApplet {
 
     public String getSketchFilename(String format) {
         String sketchName = this.getClass().getSimpleName().toLowerCase();
-        File folder = new File("/Users/pflouret/code/sketchbook/screenshots/" + sketchName);
+        File folder = new File("/Users/pflouret/Dropbox/sketchout/" + sketchName);
         folder.mkdirs();
 
         String filename = String.format(format,
