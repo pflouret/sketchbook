@@ -1,5 +1,6 @@
 package io.github.pflouret.sketchbook.growth.laplacian;
 
+import com.hamoid.VideoExport;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
 import processing.core.PVector;
@@ -25,16 +26,24 @@ public class LaplacianGrowth extends ProcessingApp {
 
     private int direction = 0;
     private float splitDistance = 3;
-    private float minDistance = 3;
-    private float randomness = 0.12f;
+    private float minDistance = 2.5f;
+    private float randomness = 0.92f;
     private float maxStepDistance = 1f;
-    private float stepScale = 0.3f;
+    private float stepScale = 0.4f;
     int maxSkipCount = 4;
+
+    private boolean saveVideo = true;
+    private VideoExport video;
 
     public LaplacianGrowth() {
         if (app == null) {
             app = this;
         }
+    }
+
+    @Override
+    public void settings() {
+        size(1000, 1000);
     }
 
     @Override
@@ -162,6 +171,13 @@ public class LaplacianGrowth extends ProcessingApp {
         //stroke(0, 1);
         //noLoop();
         fill(0);
+        //stroke(255);
+        //strokeWeight(1.5f);
+
+        if (saveVideo) {
+            video = getVideoExporter();
+            video.startMovie();
+        }
     }
 
     @Override
@@ -199,6 +215,10 @@ public class LaplacianGrowth extends ProcessingApp {
         }
 
         update();
+
+        if (video != null) {
+            video.saveFrame();
+        }
     }
 
     @Override
