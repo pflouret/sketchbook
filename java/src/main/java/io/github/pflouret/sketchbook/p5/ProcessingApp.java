@@ -123,7 +123,7 @@ public class ProcessingApp extends PApplet {
         File folder = new File("/Users/pflouret/Dropbox/sketchout/" + sketchName);
         folder.mkdirs();
 
-        String filename = String.format(format,
+        String filename = String.format(sketchName + "_" + format,
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")));
 
         return folder.toPath()
