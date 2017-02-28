@@ -25,14 +25,14 @@ public class LaplacianGrowth extends ProcessingApp {
     private boolean showTriangulation = false;
 
     private int direction = 0;
-    private float splitDistance = 3;
-    private float minDistance = 2.5f;
+    private float splitDistance = 4;
+    private float minDistance = 3.5f;
     private float randomness = 0.92f;
     private float maxStepDistance = 1f;
     private float stepScale = 0.4f;
     int maxSkipCount = 4;
 
-    private boolean saveVideo = true;
+    private boolean saveVideo = false;
     private VideoExport video;
 
     public LaplacianGrowth() {
