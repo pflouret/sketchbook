@@ -1,5 +1,13 @@
 ## Generative art experiments in processing
 
+[growth](https://github.com/pflouret/sketchbook/tree/master/java/src/main/java/io/github/pflouret/sketchbook/growth)
+&#x25B4;
+[offset stripes](https://github.com/pflouret/sketchbook/tree/master/java/src/main/java/io/github/pflouret/sketchbook/lines)
+&#x25B4;
+[noisy agents](https://github.com/pflouret/sketchbook/tree/master/ruby/src/agent_noise)
+
+---
+
 <img src="https://dl.dropboxusercontent.com/s/j50zxiaxx4rpiht/2017-01-07_152922_s65608_f17124.png" width=290px>
 <img src="https://dl.dropboxusercontent.com/s/7ke9qs3up7lc56v/2017-01-07_143028_s37840_f10838.png" height=290px>
 <img src="https://dl.dropboxusercontent.com/s/azf1c72amhxflh3/2017-01-06_193443_s69052_f01067.png" width=290px>
@@ -18,7 +26,6 @@
 <img src="https://dl.dropboxusercontent.com/s/oj7uzeuk7dkow0r/2017-01-07_153520_s96955_f02561.png" width=880px>
 
 If the code ain't pretty, it's because that's not really the aim of this endeavor...
-
 
 ---
 
