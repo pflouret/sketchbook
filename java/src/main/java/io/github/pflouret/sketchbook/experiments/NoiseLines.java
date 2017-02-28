@@ -14,13 +14,13 @@ public class NoiseLines extends ProcessingApp {
     public void setup() {
         super.setup();
         stroke(0, 10);
-        origin = pv(random(width), random(height));
+        origin = new PVec(random(width), random(height));
     }
 
     @Override
     public void draw() {
         float resolution = 0.01f;
-        PVec mouse = pv(mouseX, mouseY);
+        PVec mouse = new PVec((float) mouseX, (float) mouseY);
         float d = PVector.dist(origin, mouse);
         int steps = round(d/resolution);
         for (int i=0; i < steps; i++) {

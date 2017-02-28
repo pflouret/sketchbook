@@ -42,7 +42,7 @@ public class LloydRelaxationGrowth extends ProcessingApp {
                         DelaunayVertex circumcenter = tri.getCircumcenter();
                         region.add(new Vec2D((float) circumcenter.coord(0), (float) circumcenter.coord(1)));
                     }
-                    TVec v = tv((float) site.coord(0), (float) site.coord(1));
+                    TVec v = new TVec((float) site.coord(0), (float) site.coord(1));
                     Vec2D centroid = clipper.clipPolygon(region).getCentroid();
                     TVertex vertex = vertices.remove(v);
                     vertex.set(centroid);

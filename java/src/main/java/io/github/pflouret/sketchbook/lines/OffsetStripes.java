@@ -74,17 +74,17 @@ public class OffsetStripes extends ProcessingApp {
         float offset = random(height/10.0f, height/4.0f);
         NoiseWave wave = new NoiseWave(this, 0, 1/30f, 100, offset);
 
-        curves.add(Stream.of(pv(0, 0), pv(width, 0)).collect(Collectors.toCollection(LinkedList::new)));
+        curves.add(Stream.of(new PVec((float) 0, (float) 0), new PVec((float) width, (float) 0)).collect(Collectors.toCollection(LinkedList::new)));
 
         while (offset < height - 30) {
             curves.add(IntStream.rangeClosed(0, width)
-                .mapToObj(x -> pv(x, wave.update()))
+                .mapToObj(x -> new PVec((float) x, wave.update()))
                 .collect(Collectors.toCollection(LinkedList::new)));
             offset += random(60, 100);
             wave.offset = offset;
         }
 
-        curves.add(Stream.of(pv(0, height), pv(width, height)).collect(Collectors.toCollection(LinkedList::new)));
+        curves.add(Stream.of(new PVec((float) 0, (float) height), new PVec((float) width, (float) height)).collect(Collectors.toCollection(LinkedList::new)));
     }
 
     private void buildShapes() {
