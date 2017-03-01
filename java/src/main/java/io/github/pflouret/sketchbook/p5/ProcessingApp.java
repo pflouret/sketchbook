@@ -9,12 +9,12 @@ import toxi.geom.Vec2D;
 import toxi.processing.ToxiclibsSupport;
 
 import java.io.File;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class ProcessingApp extends PApplet {
@@ -163,7 +163,45 @@ public class ProcessingApp extends PApplet {
             }
         }
     }
-    /*
-	public static void main(String[] args) { PApplet.main(MethodHandles.lookup().lookupClass()); }
-	*/
+
+    public void humanline(PGraphics pg, float x0, float y0, float x1, float y1, float squiggleFactor) {
+
+        float d = dist(x0, y0, x1, y1);
+        float step = d <= 200 ? .5f : (d <= 400 ? .3f : .2f);
+
+        LinkedList<PVec> points = humanlinePoints(x0, y0, x1, y1, (float) 2, step, squiggleFactor);
+
+        // Control points.
+        points.addFirst(points.getFirst());
+        points.addLast(points.getLast());
+
+        pg.beginShape();
+        points.forEach(p -> pg.curveVertex(p.x, p.y));
+        pg.endShape();
+    }
+
+    public void humanline(float x0, float y0, float x1, float y1, float squiggleFactor) {
+        humanline(g, x0, y0, x1, y1, squiggleFactor);
+    }
+
+    public void humanline(PVec p1, PVec p2, float squiggleFactor) {
+        humanline(g, p1.x, p1.y, p2.x, p2.y, squiggleFactor);
+    }
+
+    public LinkedList<PVec> humanlinePoints(
+        float x0, float y0, float x1, float y1, float tf, float step, float squiggleFactor) {
+
+        float d = dist(x0, y0, x1, y1);
+        float squiggleRange = squiggleFactor*(d <= 150 ? .5f : (d <= 400 ? 1 : 2));
+
+        return IntStream.range(0, round(tf/step))
+            .mapToDouble(i -> i*step)
+            .mapToObj(t -> new PVec(f(x0, x1, (float)t/tf, squiggleRange), f(y0, y1, (float)t/tf, squiggleRange)))
+            .collect(Collectors.toCollection(LinkedList::new));
+    }
+
+    private float f(float c0, float c1, float tau, float squiggleRange) {
+        float squiggle = random(-squiggleRange, squiggleRange);
+        return c0 + (c0-c1)*(15*pow(tau, 4) - 6*pow(tau, 5) - 10*pow(tau, 3)) + squiggle;
+    }
 }
