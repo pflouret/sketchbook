@@ -164,6 +164,14 @@ public class ProcessingApp extends PApplet {
         }
     }
 
+    public void humanline(float x0, float y0, float x1, float y1, float squiggleFactor) {
+        humanline(g, x0, y0, x1, y1, squiggleFactor);
+    }
+
+    public void humanline(PVec p1, PVec p2, float squiggleFactor) {
+        humanline(g, p1.x, p1.y, p2.x, p2.y, squiggleFactor);
+    }
+
     public void humanline(PGraphics pg, float x0, float y0, float x1, float y1, float squiggleFactor) {
 
         float d = dist(x0, y0, x1, y1);
@@ -180,14 +188,6 @@ public class ProcessingApp extends PApplet {
         pg.endShape();
     }
 
-    public void humanline(float x0, float y0, float x1, float y1, float squiggleFactor) {
-        humanline(g, x0, y0, x1, y1, squiggleFactor);
-    }
-
-    public void humanline(PVec p1, PVec p2, float squiggleFactor) {
-        humanline(g, p1.x, p1.y, p2.x, p2.y, squiggleFactor);
-    }
-
     public LinkedList<PVec> humanlinePoints(
         float x0, float y0, float x1, float y1, float tf, float step, float squiggleFactor) {
 
@@ -200,8 +200,62 @@ public class ProcessingApp extends PApplet {
             .collect(Collectors.toCollection(LinkedList::new));
     }
 
+    public void humanlineFill2(
+        PGraphics pg, float squiggleFactor, float spacing, float scale, float angle, boolean squish) {
+
+        pg.pushMatrix();
+
+        //pg.translate(w2, h2);
+        int w2 = pg.width/2;
+        int h2 = pg.height/2;
+        pg.translate(w2, h2);
+        pg.rotate(angle);
+        pg.scale(scale);
+
+        for (float y=-h2, offset=0; y <= h2; y += spacing-offset) {
+            humanline(pg, -w2, y-offset, w2, y-offset, squiggleFactor);
+            offset = squish ? calcOffset(offset, spacing) : 0;
+        }
+
+        pg.popMatrix();
+    }
+
+    public void humanlineFill(
+        PGraphics pg, float squiggleFactor, float spacing, float scale, float angle, boolean squish) {
+
+        int w2 = pg.width/2;
+        int h2 = pg.height/2;
+
+        for (float y=-h2, offset=0; y <= h2; y += spacing-offset) {
+            humanline(pg, -w2, y-offset, w2, y-offset, squiggleFactor);
+            offset = squish ? calcOffset(offset, spacing) : 0;
+        }
+
+        /*
+        for (float y=0, offset=0; y <= pg.height; y += spacing-offset) {
+           humanline(pg, 0, y, x, 0, squiggleFactor);
+        }
+        */
+    }
+
+    public void humanlineFill(float squiggleFactor, float spacing, float scale, float angle, boolean squish) {
+        humanlineFill(g, squiggleFactor, spacing, scale, angle, squish);
+    }
+
+
     private float f(float c0, float c1, float tau, float squiggleRange) {
         float squiggle = random(-squiggleRange, squiggleRange);
         return c0 + (c0-c1)*(15*pow(tau, 4) - 6*pow(tau, 5) - 10*pow(tau, 3)) + squiggle;
+    }
+
+    private float calcOffset(float prevOffset, float spacing) {
+        float offset = prevOffset;
+        if(random(1) < 0.15f && offset == 0) {
+            offset = random(0, spacing/2);
+            offset -= random(0, offset/1.7f);
+        } else if (random(1) < 0.05f && offset != 0) {
+            offset = 0;
+        }
+        return offset;
     }
 }
