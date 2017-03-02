@@ -4,6 +4,8 @@ import com.hamoid.VideoExport;
 import controlP5.ControlP5;
 import processing.core.PApplet;
 import processing.core.PGraphics;
+import processing.core.PImage;
+import processing.core.PStyle;
 import processing.core.PVector;
 import toxi.geom.Vec2D;
 import toxi.processing.ToxiclibsSupport;
@@ -116,7 +118,7 @@ public class ProcessingApp extends PApplet {
         File folder = new File("/Users/pflouret/Dropbox/sketchout/" + sketchName);
         folder.mkdirs();
 
-        String filename = String.format(sketchName + "_" + format,
+        String filename = String.format(insertFrame(sketchName + "_" + format),
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")));
 
         return folder.toPath()
@@ -134,6 +136,7 @@ public class ProcessingApp extends PApplet {
         switch (key) {
             case 'c':
                 clear(); break;
+            case 'r':
             case 'R':
                 reset(); break;
             case 'p':
@@ -203,5 +206,38 @@ public class ProcessingApp extends PApplet {
     private float f(float c0, float c1, float tau, float squiggleRange) {
         float squiggle = random(-squiggleRange, squiggleRange);
         return c0 + (c0-c1)*(15*pow(tau, 4) - 6*pow(tau, 5) - 10*pow(tau, 3)) + squiggle;
+    }
+
+    public PImage stripedTexture(int boundingWidth, int boundingHeight, float angle, float spacing, PStyle style) {
+
+        angle = radians(angle);
+        // Rotate square top vertices around its center.
+        float w2 = boundingWidth/2f, h2 = boundingHeight/2f;
+        PVector p1 = new PVector(-w2, -h2).rotate(angle).add(w2, h2);
+        PVector p2 = new PVector(w2, -h2).rotate(angle).add(w2, h2);
+        PVector p0 = new PVector(boundingWidth, 0);
+        PVector pdiff = p2.copy().sub(p1);
+
+        p1.set(round(p1.x*1000)/1000f, round(p1.y*1000)/1000f);
+        p2.set(round(p1.x*1000)/1000f, round(p1.y*1000)/1000f);
+
+        // Distance from NE corner to the rotated line formed by p1 and p2.
+        float d = abs(pdiff.y*p0.x - pdiff.x*p0.y + p2.x*p1.y - p2.y*p1.x) / pdiff.mag();
+
+        PGraphics pg = createGraphics(boundingWidth, boundingHeight);
+        pg.beginDraw();
+        pg.style(style);
+        pg.translate(w2, h2);
+        pg.rotate(angle);
+        for (float y = -h2-d; y <= h2+d; y+=spacing) {
+            pg.line(-w2-d, y, w2+d, y);
+        }
+        pg.endDraw();
+
+        return pg.get();
+    }
+
+    public PImage stripedTexture(int boundingWidth, int boundingHeight, float angle, float spacing) {
+        return stripedTexture(boundingWidth, boundingHeight, angle, spacing, g.getStyle());
     }
 }

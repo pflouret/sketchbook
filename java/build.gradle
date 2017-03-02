@@ -10,6 +10,9 @@ repositories {
 }
 
 dependencies {
+    compile 'com.google.guava:guava:21.0'
+    compile 'org.apache.commons:commons-math3:3.6.1'
+
     compile fileTree(dir: "lib", include: "**/*.jar")
     //compile fileTree(dir: "../libraries", include: "**/*.jar")
     //compile fileTree(dir: "/Applications/Processing.app/Contents/Java/core/library", include: "*.jar")
