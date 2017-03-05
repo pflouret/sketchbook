@@ -2,7 +2,7 @@ package io.github.pflouret.sketchbook.p5;
 
 import com.hamoid.VideoExport;
 import controlP5.ControlP5;
-import processing.core.PApplet;
+import processing.core.PAppletHack;
 import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PStyle;
@@ -19,7 +19,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public class ProcessingApp extends PApplet {
+public class ProcessingApp extends PAppletHack {
+    public static ProcessingApp app;
+
     protected static final int INITIAL_W = 600;
     protected static final int INITIAL_H = 600;
 
@@ -31,6 +33,11 @@ public class ProcessingApp extends PApplet {
 
     protected ToxiclibsSupport gfx;
     protected ControlP5 cp;
+
+    public ProcessingApp() {
+        super();
+        app = this;
+    }
 
     @Override
     public void settings() {
@@ -100,6 +107,10 @@ public class ProcessingApp extends PApplet {
 
     public <T> T randomChoice(List<T> list) {
         return list.isEmpty() ? null : list.get(floor(random(0, list.size())));
+    }
+
+    public int randomInt(int low, int high) {
+        return getRandom().nextInt(high-low) + low;
     }
 
     public void screenshot(PGraphics g) {
