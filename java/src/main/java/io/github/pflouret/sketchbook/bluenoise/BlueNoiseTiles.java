@@ -3,12 +3,14 @@ package io.github.pflouret.sketchbook.bluenoise;
 import io.github.pflouret.sketchbook.p5.PoissonDiskSampler;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
+import processing.core.PStyle;
 import toxi.geom.ReadonlyVec2D;
 import toxi.geom.Rect;
 import toxi.geom.Vec2D;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Vector;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -139,28 +141,60 @@ public class BlueNoiseTiles extends ProcessingApp {
         });
     }
 
+    private void drawWonkyEllipse(Vec2D p, float offset) {
+        ellipse(p.x, p.y, random(offset-1, offset), random(offset, offset+1));
+        ellipse(p.x+random(-1, 1), p.y+random(-1, 1), random(offset, offset+3), random(offset+1, offset+3));
+        ellipse(p.x+random(-1, 1), p.y+random(-1, 1), random(offset-1, offset+1), random(offset-4, offset));
+    }
+
+    private void drawStrips(Vec2D p, float curveLengthSpread) {
+        beginShape();
+        float b = random(curveLengthSpread-1, curveLengthSpread+1);
+        float off = random(3, 20);
+        //stroke(360*noise((frameCount+p.x)/100f, (frameCount+p.y)/100f), 100, 100);
+        if (random(1) < .93f) {
+            curveVertex(p.x+off, p.y+off);
+            curveVertex(p.x, p.y);
+            curveVertex(p.x+b, p.y-b);
+            curveVertex(p.x+b+off, p.y+b+off/2f);
+        } else {
+            curveVertex(p.x-off, p.y-off);
+            curveVertex(p.x, p.y);
+            curveVertex(p.x-b, p.y+b);
+            curveVertex(p.x-b-off, p.y-b-off/2f);
+        }
+        endShape();
+    }
+
+    private void drawSquares(Vec2D p, float size) {
+        float off = 2;
+        rect(p.x, p.y, size, size);
+        rect(p.x+random(-off, off), p.y+random(-off, off), size+random(-2, -1), size);
+        rect(p.x+random(-off, off), p.y+random(-off, off), size+random(-1.5f, 2), size+random(-.5f, .5f));
+    }
+
     @Override
     public void draw() {
         clear();
         tiles.forEach(t -> {
-            //fill(random(255), random(255), random(255));
-            push();
-            strokeWeight(random(1, 3));
-            //gfx.rect(t);
-            t.points.forEach(p -> {
-                point(p);
-            });
-            pop();
+            if (t.style == null) {
+                PStyle style = g.getStyle();
+                style.strokeWeight = random(1, 3);
+                style.strokeColor = color(random(255), random(255), random(255));
+                t.style = style;
+            }
+            t.draw();
         });
     }
 
     @Override
     public void keyPressed() {
         switch(key) {
+            case 's':
+                subdivide();
+                // Fall through.
             case 'a':
                 addPoints(); break;
-            case 's':
-                subdivide(); break;
             default:
                 super.keyPressed();
         }
@@ -169,13 +203,26 @@ public class BlueNoiseTiles extends ProcessingApp {
 
     class Tile extends Rect {
         Vector<Vec2D> points = new Vector<>();
+        Consumer<Vec2D> drawPoint = BlueNoiseTiles.this::point;
+        PStyle style;
 
-        public Tile(float x, float y, float width, float height) {
+        Tile(float x, float y, float width, float height) {
             super(x, y, width, height);
         }
 
-        public Tile(ReadonlyVec2D p1, ReadonlyVec2D p2) {
+        Tile(ReadonlyVec2D p1, ReadonlyVec2D p2) {
             super(p1, p2);
+        }
+
+
+
+        void draw() {
+            push();
+            if (style != null) {
+                style(style);
+            }
+            points.forEach(drawPoint);
+            pop();
         }
     }
 

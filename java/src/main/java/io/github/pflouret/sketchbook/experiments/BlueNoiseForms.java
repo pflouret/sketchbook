@@ -71,7 +71,7 @@ public class BlueNoiseForms extends ProcessingApp {
 
     private float cc = 5;
     private void drawSquares(Vec2D p) {
-        float off = 3;
+        float off = 2;
         rect(p.x, p.y, cc, cc);
         rect(p.x+random(-off, off), p.y+random(-off, off), cc+random(-2, -1), cc);
         rect(p.x+random(-off, off), p.y+random(-off, off), cc+random(-1.5f, 2), cc+random(-.5f, .5f));
