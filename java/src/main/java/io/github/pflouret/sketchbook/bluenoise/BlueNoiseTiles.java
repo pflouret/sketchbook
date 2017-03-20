@@ -99,6 +99,28 @@ public class BlueNoiseTiles extends ProcessingApp {
         tiles = newTiles;
     }
 
+    private PStyle getRandomStyle() {
+        float alpha = random(20, 40);
+
+        PStyle style = g.getStyle();
+        style.strokeWeight = random(1, 3);
+        style.strokeColor = color(random(255), random(255), random(255), alpha);
+        //fill(c, alpha / 1.1f);
+        return style;
+    }
+
+    private Consumer<Vec2D> getRandomDrawFun() {
+        float p = random(1);
+
+        if (p < .33333f) {
+            return (v) -> drawWonkyEllipse(v, 5);
+        } else if (p < .66666f) {
+            return (v) -> drawStrips(v, 3);
+        } else {
+            return (v) -> drawSquares(v, 3);
+        }
+    }
+
     private void subdivide() {
         Vector<Tile> newTiles = new Vector<>();
 
@@ -113,14 +135,14 @@ public class BlueNoiseTiles extends ProcessingApp {
                     if (x-topLeft.x < 10) {
                         continue;
                     }
-                    r = new Tile(topLeft.x, topLeft.y, x-topLeft.x, rect.height);
+                    r = new Tile(topLeft.x, topLeft.y, x-topLeft.x, rect.height, getRandomStyle(), getRandomDrawFun());
                     topLeft = r.getTopRight();
                 } else {
                     float y = random(topLeft.y, rect.getBottomRight().y);
                     if (y-topLeft.y < 10) {
                         continue;
                     }
-                    r = new Tile(topLeft.x, topLeft.y, rect.width, y-topLeft.y);
+                    r = new Tile(topLeft.x, topLeft.y, rect.width, y-topLeft.y, getRandomStyle(), getRandomDrawFun());
                     topLeft = r.getBottomLeft();
                 }
                 newTiles.add(r);
@@ -130,14 +152,14 @@ public class BlueNoiseTiles extends ProcessingApp {
                 newTiles.add(rect);
             } else {
                 topLeft = vertical ? newTiles.lastElement().getTopRight() : newTiles.lastElement().getBottomLeft();
-                newTiles.add(new Tile(topLeft, rect.getBottomRight()));
+                newTiles.add(new Tile(topLeft, rect.getBottomRight(), getRandomStyle(), getRandomDrawFun()));
             }
         });
         tiles = newTiles;
     }
     private void addPoints() {
         tiles.forEach((t) -> {
-            t.points.addAll(new PoissonDiskSampler(t, random(2, 7), getRandom()).sample(15000));
+            t.points.addAll(new PoissonDiskSampler(t, random(10, 17), getRandom()).sample(15000));
         });
     }
 
@@ -176,15 +198,7 @@ public class BlueNoiseTiles extends ProcessingApp {
     @Override
     public void draw() {
         clear();
-        tiles.forEach(t -> {
-            if (t.style == null) {
-                PStyle style = g.getStyle();
-                style.strokeWeight = random(1, 3);
-                style.strokeColor = color(random(255), random(255), random(255));
-                t.style = style;
-            }
-            t.draw();
-        });
+        tiles.forEach(Tile::draw);
     }
 
     @Override
@@ -203,17 +217,33 @@ public class BlueNoiseTiles extends ProcessingApp {
 
     class Tile extends Rect {
         Vector<Vec2D> points = new Vector<>();
-        Consumer<Vec2D> drawPoint = BlueNoiseTiles.this::point;
+        Consumer<Vec2D> drawPoint;
         PStyle style;
 
-        Tile(float x, float y, float width, float height) {
+        Tile(float x, float y, float width, float height, PStyle style, Consumer<Vec2D> drawPoint) {
             super(x, y, width, height);
+            this.style = style;
+            this.drawPoint = drawPoint;
+        }
+
+        Tile(float x, float y, float width, float height) {
+            this(x, y, width, height, null, BlueNoiseTiles.this::point);
+        }
+
+        Tile(ReadonlyVec2D p1, ReadonlyVec2D p2, PStyle style, Consumer<Vec2D> drawPoint) {
+            super(p1, p2);
+            this.style = style;
+            this.drawPoint = drawPoint;
         }
 
         Tile(ReadonlyVec2D p1, ReadonlyVec2D p2) {
-            super(p1, p2);
+            this(p1, p2, null, BlueNoiseTiles.this::point);
         }
 
+        void randomizeStyles() {
+
+
+        }
 
 
         void draw() {
