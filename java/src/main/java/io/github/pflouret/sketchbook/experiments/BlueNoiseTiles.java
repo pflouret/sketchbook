@@ -1,4 +1,4 @@
-package io.github.pflouret.sketchbook.bluenoise;
+package io.github.pflouret.sketchbook.experiments;
 
 import io.github.pflouret.sketchbook.p5.PoissonDiskSampler;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;

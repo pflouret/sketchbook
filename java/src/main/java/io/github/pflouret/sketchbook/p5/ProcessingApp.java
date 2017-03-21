@@ -113,6 +113,10 @@ public class ProcessingApp extends PAppletHack {
         return getRandom().nextInt(high-low) + low;
     }
 
+    public boolean prob(double probability) {
+        return random(1) < probability;
+    }
+
     public void screenshot(PGraphics g) {
         saveFrame(getSketchFilename("%s_####.png"));
     }
