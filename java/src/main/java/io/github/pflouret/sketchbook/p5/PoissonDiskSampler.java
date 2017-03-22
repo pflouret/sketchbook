@@ -46,7 +46,11 @@ public class PoissonDiskSampler {
         gridHeight = (int)(bounds.height/cellSize) + 1;
         grid =  new List[gridWidth][gridHeight];
 
-        Vec2D p = new Vec2D(bounds.x + bounds.width*random.nextFloat(), bounds.y + bounds.height*random.nextFloat());
+        Vec2D p;
+        do {
+            p = new Vec2D(bounds.x+bounds.width*random.nextFloat(), bounds.y+bounds.height*random.nextFloat());
+        } while (!shape.containsPoint(p));
+
         int[] index = pointToGrid(p, cellSize);
         grid[index[0]][index[1]] = new ArrayList<>(100);
         grid[index[0]][index[1]].add(p);
