@@ -15,6 +15,8 @@ import java.util.function.BiFunction;
  * Adapted from Herman Tulleken's http://code-spot.co.za/2010/04/07/poisson-disk-sampling-example-code/
  */
 public class PoissonDiskSampler {
+    public final static BiFunction<Float, Float, Float> NOOP_DISTRIBUTION = (x, y) -> 1f;
+
     private final static int DEFAULT_K = 15;
 
     private int k;
@@ -63,7 +65,7 @@ public class PoissonDiskSampler {
     }
 
     public PoissonDiskSampler(Shape2D shape, float minDist, Random random) {
-        this(shape, minDist, (x, y) -> 1f, DEFAULT_K, random);
+        this(shape, minDist, NOOP_DISTRIBUTION, DEFAULT_K, random);
     }
 
     public List<Vec2D> sample(int n) {

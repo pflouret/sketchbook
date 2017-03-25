@@ -11,10 +11,13 @@ import toxi.geom.Vec2D;
 import toxi.processing.ToxiclibsSupport;
 
 import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -59,6 +62,12 @@ public class ProcessingApp extends PAppletHack {
         gfx = new ToxiclibsSupport(this);
         w2 = width / 2;
         h2 = height / 2;
+
+        registerMethod("pre", this);
+    }
+
+    public void pre() {
+        processControlEvents();
     }
 
     public void pr(Object... args) {
@@ -111,6 +120,10 @@ public class ProcessingApp extends PAppletHack {
 
     public int randomInt(int low, int high) {
         return getRandom().nextInt(high-low) + low;
+    }
+
+    public Vec2D randomPoint() {
+        return new Vec2D(random(0, width), random(0, height));
     }
 
     public boolean prob(double probability) {
@@ -254,5 +267,61 @@ public class ProcessingApp extends PAppletHack {
 
     public PImage stripedTexture(int boundingWidth, int boundingHeight, float angle, float spacing) {
         return stripedTexture(boundingWidth, boundingHeight, angle, spacing, g.getStyle());
+    }
+
+    public void wonkyEllipse(Vec2D p, float offset) {
+        ellipse(p.x, p.y, random(offset-1, offset), random(offset, offset+1));
+        ellipse(p.x+random(-1, 1), p.y+random(-1, 1), random(offset, offset+3), random(offset+1, offset+3));
+        ellipse(p.x+random(-1, 1), p.y+random(-1, 1), random(offset-1, offset+1), random(offset-4, offset));
+    }
+
+    public void curvyStrip(Vec2D p, float curveLengthSpread) {
+        beginShape();
+        float b = random(curveLengthSpread-1, curveLengthSpread+1);
+        float off = random(3, 15);
+        if (prob(.98)) {
+            curveVertex(p.x+off, p.y+off);
+            curveVertex(p.x, p.y);
+            curveVertex(p.x+b, p.y-b);
+            curveVertex(p.x+b+off, p.y+b+off/2f);
+        } else {
+            curveVertex(p.x-off, p.y-off);
+            curveVertex(p.x, p.y);
+            curveVertex(p.x-b, p.y+b);
+            curveVertex(p.x-b-off, p.y-b-off/2f);
+        }
+        endShape();
+    }
+
+    protected ConcurrentLinkedQueue<BaseControlFrame.ControlFrameEvent> controlEventQueue = new ConcurrentLinkedQueue<>();
+    public void postControlEvent(BaseControlFrame.ControlFrameEvent e) {
+        controlEventQueue.add(e);
+        redraw();
+    }
+
+    protected void processControlEvents() {
+        BaseControlFrame.ControlFrameEvent e;
+        boolean processed = false;
+        while ((e = controlEventQueue.poll()) != null) {
+            try {
+                Field field = getClass().getDeclaredField(e.name);
+                field.setAccessible(true);
+                field.set(this, e.value);
+                processed = true;
+                continue;
+            } catch (NoSuchFieldException ex) {
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+
+            try {
+                Method method = getClass().getDeclaredMethod(e.name);
+                method.invoke(this);
+                processed = true;
+            } catch (NoSuchMethodException ex) {
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 }
