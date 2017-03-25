@@ -68,7 +68,7 @@ public class Tiles extends ProcessingApp {
                     c = color(0, 0, random(255), alpha);
                     style.stroke = false;
                     style.fill = true;
-                    t.drawPoint = (v) -> drawWonkyEllipse(v, random(1, 3));
+                    t.drawPoint = (v) -> wonkyEllipse(v, random(1, 3));
                     minDist = random(4, 6);
                 } else if (prob(.4)) {
                     alpha = random(200, 255);
@@ -78,12 +78,12 @@ public class Tiles extends ProcessingApp {
                 } else if (prob(.8)) {
                     alpha = random(100, 140);
                     style.fill = true;
-                    t.drawPoint = (v) -> drawWonkyEllipse(v, random(2, 4));
+                    t.drawPoint = (v) -> wonkyEllipse(v, random(2, 4));
                     minDist = 6;
                 } else if (prob(.8)) {
                     alpha = random(210, 255);
                     style.strokeWeight = random(.9f, 1.3f);
-                    t.drawPoint = (v) -> drawStrips(v, random(3, 5));
+                    t.drawPoint = (v) -> curvyStrip(v, random(3, 5));
                 } else {
                     alpha = random(40, 70);
                     style.fill = true;
@@ -108,47 +108,6 @@ public class Tiles extends ProcessingApp {
         voronoi = v;
 
         resetTiles();
-    }
-
-    private Vec2D randomPoint() {
-        return new Vec2D(random(0, width), random(0, height));
-    }
-
-    private Consumer<Vec2D> getRandomDrawFun() {
-        float p = random(1);
-
-        if (p < .5) {
-            return (v) -> drawWonkyEllipse(v, random(1, 4));
-        } else if (p < .9) {
-            return (v) -> drawStrips(v, 3);
-        } else {
-            return (v) -> drawSquares(v, 3);
-        }
-    }
-
-    private void drawWonkyEllipse(Vec2D p, float offset) {
-        ellipse(p.x, p.y, random(offset-1, offset), random(offset, offset+1));
-        ellipse(p.x+random(-1, 1), p.y+random(-1, 1), random(offset, offset+3), random(offset+1, offset+3));
-        ellipse(p.x+random(-1, 1), p.y+random(-1, 1), random(offset-1, offset+1), random(offset-4, offset));
-    }
-
-    private void drawStrips(Vec2D p, float curveLengthSpread) {
-        beginShape();
-        float b = random(curveLengthSpread-1, curveLengthSpread+1);
-        float off = random(3, 15);
-        //stroke(360*noise((frameCount+p.x)/100f, (frameCount+p.y)/100f), 100, 100);
-        if (prob(.98)) {
-            curveVertex(p.x+off, p.y+off);
-            curveVertex(p.x, p.y);
-            curveVertex(p.x+b, p.y-b);
-            curveVertex(p.x+b+off, p.y+b+off/2f);
-        } else {
-            curveVertex(p.x-off, p.y-off);
-            curveVertex(p.x, p.y);
-            curveVertex(p.x-b, p.y+b);
-            curveVertex(p.x-b-off, p.y-b-off/2f);
-        }
-        endShape();
     }
 
     private void drawSquares(Vec2D p, float size) {
