@@ -203,6 +203,22 @@ public class ProcessingApp extends PAppletHack {
         }
     }
 
+    public void noiseline(PGraphics pg, PVector v0, PVector v1, float resolution, float probability) {
+        int steps = round(v0.dist(v1)/resolution);
+        IntStream.range(0, steps)
+            .filter(i -> prob(probability))
+            .mapToObj(i -> PVector.lerp(v0, v1, ((float)i)/steps))
+            .forEach(p -> pg.point(p.x, p.y));
+    }
+
+    public void noiseline(PVector v0, PVector v1, float probability) {
+        noiseline(g, v0, v1, .01f, probability);
+    }
+
+    public void noiseline(float x0, float y0, float x1, float y1, float probability) {
+        noiseline(new PVector(x0, y0), new PVector(x1, y1), probability);
+    }
+
     public void humanline(PGraphics pg, float x0, float y0, float x1, float y1, float squiggleFactor) {
 
         float d = dist(x0, y0, x1, y1);
