@@ -31,6 +31,7 @@ public class ProcessingApp extends PAppletHack {
     protected int bgColor = color(255);
     protected long seed;
     protected boolean redraw_on_event = true;
+    protected boolean record = false;
     protected int w2;
     protected int h2;
 
@@ -134,6 +135,14 @@ public class ProcessingApp extends PAppletHack {
         saveFrame(getSketchFilename("%s_####.png"));
     }
 
+    public void screenshot() {
+        screenshot(getGraphics());
+    }
+
+    public void recordSVG() {
+        beginRecord(SVG, getSketchFilename("%s_####.svg"));
+    }
+
     public VideoExport getVideoExporter() {
         VideoExport video = new VideoExport(this, getSketchFilename("%s.mp4"));
         video.setFrameRate(60);
@@ -155,18 +164,17 @@ public class ProcessingApp extends PAppletHack {
             .toString();
     }
 
-    public void screenshot() {
-        screenshot(getGraphics());
-    }
-
     @Override
     public void keyPressed() {
         switch (key) {
             case 'c':
                 clear(); break;
             case 'r':
-            case 'R':
                 reset(); break;
+            case 'R':
+                record = true;
+                redraw();
+                break;
             case 'p':
                 toggleLoop(); break;
             case 'S':
