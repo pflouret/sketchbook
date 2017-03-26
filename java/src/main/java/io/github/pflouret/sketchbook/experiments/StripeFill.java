@@ -1,6 +1,5 @@
 package io.github.pflouret.sketchbook.experiments;
 
-import io.github.pflouret.sketchbook.p5.PVec;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
 import processing.core.PVector;
@@ -28,7 +27,7 @@ public class StripeFill extends ProcessingApp {
         float a = map(mouseX, 30, width-30, 0, PI/2);
         float spacing = map(mouseY, 0, height, 1, 20);
 
-        PVector o = new PVec(200, 200);
+        PVector o = new PVector(200, 200);
         int w = 200, h = 200;
 
         // Rotate square top vertices around its center.

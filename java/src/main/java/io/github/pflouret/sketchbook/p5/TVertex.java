@@ -1,8 +1,9 @@
 package io.github.pflouret.sketchbook.p5;
 
 import toxi.geom.ReadonlyVec2D;
+import toxi.geom.Vec2D;
 
-public class TVertex extends TVec {
+public class TVertex extends Vec2D {
     public TVertex prev, next;
 
     public TVertex(ReadonlyVec2D readonlyVec2D) {

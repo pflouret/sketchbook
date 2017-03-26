@@ -4,12 +4,12 @@ import com.hamoid.VideoExport;
 import controlP5.ControlP5;
 import controlP5.Group;
 import io.github.pflouret.sketchbook.p5.NoiseWave;
-import io.github.pflouret.sketchbook.p5.PVec;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PShape;
+import processing.core.PVector;
 import processing.event.MouseEvent;
 
 import java.lang.invoke.MethodHandles;
@@ -24,7 +24,7 @@ public class OffsetStripes extends ProcessingApp {
     private int stripeWidth = 5;
     private float textureOffset;
     private PImage texture;
-    private List<LinkedList<PVec>> curves;
+    private List<LinkedList<PVector>> curves;
     private List<PShape> shapes;
 
     private VideoExport video;
@@ -74,17 +74,17 @@ public class OffsetStripes extends ProcessingApp {
         float offset = random(height/10.0f, height/4.0f);
         NoiseWave wave = new NoiseWave(this, 0, 1/30f, 100, offset);
 
-        curves.add(Stream.of(new PVec((float) 0, (float) 0), new PVec((float) width, (float) 0)).collect(Collectors.toCollection(LinkedList::new)));
+        curves.add(Stream.of(new PVector((float) 0, (float) 0), new PVector((float) width, (float) 0)).collect(Collectors.toCollection(LinkedList::new)));
 
         while (offset < height - 30) {
             curves.add(IntStream.rangeClosed(0, width)
-                .mapToObj(x -> new PVec((float) x, wave.update()))
+                .mapToObj(x -> new PVector((float) x, wave.update()))
                 .collect(Collectors.toCollection(LinkedList::new)));
             offset += random(60, 100);
             wave.offset = offset;
         }
 
-        curves.add(Stream.of(new PVec((float) 0, (float) height), new PVec((float) width, (float) height)).collect(Collectors.toCollection(LinkedList::new)));
+        curves.add(Stream.of(new PVector((float) 0, (float) height), new PVector((float) width, (float) height)).collect(Collectors.toCollection(LinkedList::new)));
     }
 
     private void buildShapes() {
@@ -94,12 +94,12 @@ public class OffsetStripes extends ProcessingApp {
         }
     }
 
-    private PShape buildShape(List<PVec> topVertices, LinkedList<PVec> bottomVertices, float textureOffset) {
+    private PShape buildShape(List<PVector> topVertices, LinkedList<PVector> bottomVertices, float textureOffset) {
         PShape s = createShape();
         s.beginShape();
         s.texture(texture);
         topVertices.forEach(v -> s.vertex(v.x, v.y, v.x+textureOffset, v.y));
-        ((Iterable<PVec>)bottomVertices::descendingIterator).forEach(v -> s.vertex(v.x, v.y, v.x+textureOffset, v.y));
+        ((Iterable<PVector>)bottomVertices::descendingIterator).forEach(v -> s.vertex(v.x, v.y, v.x+textureOffset, v.y));
         s.endShape(CLOSE);
         return s;
     }

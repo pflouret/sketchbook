@@ -1,13 +1,11 @@
 package io.github.pflouret.sketchbook.experiments;
 
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
-import io.github.pflouret.sketchbook.p5.TVec;
 import processing.core.PApplet;
 import toxi.geom.*;
 import toxi.geom.mesh2d.Voronoi;
 
 import java.lang.invoke.MethodHandles;
-import java.util.stream.IntStream;
 
 public class Lloyd extends ProcessingApp {
     private Voronoi voronoi = new Voronoi();

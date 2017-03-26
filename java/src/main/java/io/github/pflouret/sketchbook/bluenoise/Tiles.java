@@ -1,6 +1,5 @@
 package io.github.pflouret.sketchbook.bluenoise;
 
-import io.github.pflouret.sketchbook.p5.PoissonDiskSampler;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
 import processing.core.PStyle;

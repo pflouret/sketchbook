@@ -1,10 +1,14 @@
 package io.github.pflouret.sketchbook.growth.diff;
 
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
-import io.github.pflouret.sketchbook.p5.TVec;
 import io.github.pflouret.sketchbook.p5.TVertex;
 import processing.core.PApplet;
-import toxi.geom.*;
+import toxi.geom.Circle;
+import toxi.geom.Polygon2D;
+import toxi.geom.PolygonClipper2D;
+import toxi.geom.Rect;
+import toxi.geom.SutherlandHodgemanClipper;
+import toxi.geom.Vec2D;
 import toxi.geom.mesh2d.DelaunayTriangle;
 import toxi.geom.mesh2d.DelaunayTriangulation;
 import toxi.geom.mesh2d.DelaunayVertex;
@@ -42,7 +46,7 @@ public class LloydRelaxationGrowth extends ProcessingApp {
                         DelaunayVertex circumcenter = tri.getCircumcenter();
                         region.add(new Vec2D((float) circumcenter.coord(0), (float) circumcenter.coord(1)));
                     }
-                    TVec v = new TVec((float) site.coord(0), (float) site.coord(1));
+                    Vec2D v = new Vec2D((float) site.coord(0), (float) site.coord(1));
                     Vec2D centroid = clipper.clipPolygon(region).getCentroid();
                     TVertex vertex = vertices.remove(v);
                     vertex.set(centroid);

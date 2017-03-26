@@ -1,6 +1,5 @@
-package io.github.pflouret.sketchbook.p5;
+package io.github.pflouret.sketchbook.bluenoise;
 
-import toxi.geom.Polygon2D;
 import toxi.geom.Rect;
 import toxi.geom.Shape2D;
 import toxi.geom.Vec2D;

@@ -3,7 +3,6 @@ package io.github.pflouret.sketchbook.bluenoise;
 import controlP5.CallbackListener;
 import controlP5.Group;
 import io.github.pflouret.sketchbook.p5.BaseControlFrame;
-import io.github.pflouret.sketchbook.p5.PoissonDiskSampler;
 import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
 import toxi.geom.Circle;

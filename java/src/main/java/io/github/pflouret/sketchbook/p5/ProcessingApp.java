@@ -224,7 +224,7 @@ public class ProcessingApp extends PAppletHack {
         float d = dist(x0, y0, x1, y1);
         float step = d <= 200 ? .5f : (d <= 400 ? .3f : .2f);
 
-        LinkedList<PVec> points = humanlinePoints(x0, y0, x1, y1, (float) 2, step, squiggleFactor);
+        LinkedList<PVector> points = humanlinePoints(x0, y0, x1, y1, (float) 2, step, squiggleFactor);
 
         // Control points.
         points.addFirst(points.getFirst());
@@ -239,11 +239,11 @@ public class ProcessingApp extends PAppletHack {
         humanline(g, x0, y0, x1, y1, squiggleFactor);
     }
 
-    public void humanline(PVec p1, PVec p2, float squiggleFactor) {
+    public void humanline(PVector p1, PVector p2, float squiggleFactor) {
         humanline(g, p1.x, p1.y, p2.x, p2.y, squiggleFactor);
     }
 
-    public LinkedList<PVec> humanlinePoints(
+    public LinkedList<PVector> humanlinePoints(
         float x0, float y0, float x1, float y1, float tf, float step, float squiggleFactor) {
 
         float d = dist(x0, y0, x1, y1);
@@ -251,7 +251,7 @@ public class ProcessingApp extends PAppletHack {
 
         return IntStream.range(0, round(tf/step))
             .mapToDouble(i -> i*step)
-            .mapToObj(t -> new PVec(f(x0, x1, (float)t/tf, squiggleRange), f(y0, y1, (float)t/tf, squiggleRange)))
+            .mapToObj(t -> new PVector(f(x0, x1, (float)t/tf, squiggleRange), f(y0, y1, (float)t/tf, squiggleRange)))
             .collect(Collectors.toCollection(LinkedList::new));
     }
 
