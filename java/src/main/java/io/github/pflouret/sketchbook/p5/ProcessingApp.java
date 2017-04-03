@@ -67,6 +67,23 @@ public class ProcessingApp extends PAppletHack {
         registerMethod("pre", this);
     }
 
+    @Override
+    public void draw() {
+        if (record) {
+            recordSVG();
+        }
+
+        drawInternal();
+
+        if (record) {
+            endRecord();
+            record = false;
+        }
+    }
+
+    protected void drawInternal() {
+    }
+
     public void pre() {
         processControlEvents();
     }
