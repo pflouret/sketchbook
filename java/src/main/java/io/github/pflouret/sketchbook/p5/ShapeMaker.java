@@ -1,15 +1,12 @@
 package io.github.pflouret.sketchbook.p5;
 
-import io.github.pflouret.sketchbook.p5.ProcessingApp;
 import processing.core.PApplet;
 import processing.event.KeyEvent;
 import toxi.geom.Polygon2D;
 
 import java.lang.invoke.MethodHandles;
-import java.util.Vector;
 
 public abstract class ShapeMaker extends ProcessingApp {
-    Vector<Polygon2D> polys;
     Polygon2D poly;
 
     @Override
@@ -27,7 +24,6 @@ public abstract class ShapeMaker extends ProcessingApp {
 
     @Override
     public void reset() {
-        polys = new Vector<>();
         poly = new Polygon2D();
     }
 
@@ -47,15 +43,6 @@ public abstract class ShapeMaker extends ProcessingApp {
 
     @Override
     protected void drawInternal() {
-        /*
-        clear();
-        push();
-        stroke(0, 20);
-        fill(0, 50);
-        polys.forEach(gfx::polygon2D);
-        pop();
-        */
-
         drawCurrentPoly();
     }
 

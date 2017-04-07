@@ -25,7 +25,7 @@ public class Tmpl extends ProcessingApp {
     }
 
     @Override
-    public void draw() {
+    public void drawInternal() {
     }
 
     public static void main(String[] args) { PApplet.main(MethodHandles.lookup().lookupClass()); }
