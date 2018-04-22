@@ -32,9 +32,6 @@ public class SpringEmbedder extends ProcessingApp {
     private float padding = 15;
     private float temperature;
 
-    private VideoExport video;
-    private boolean saveVideo = false;
-
     @Override
     public void settings() {
         size(1100, 1100);
@@ -44,15 +41,11 @@ public class SpringEmbedder extends ProcessingApp {
     public void setup() {
         super.setup();
 
-        if (saveVideo) {
-            video = getVideoExporter();
-            video.startMovie();
-        }
-
         noiseDetail(6, 0.45f);
         strokeWeight(2);
         //noLoop();
 
+        saveVideo = false;
         reset();
     }
 
@@ -185,7 +178,7 @@ public class SpringEmbedder extends ProcessingApp {
     }
 
     @Override
-    public void draw() {
+    public void drawInternal() {
         clear();
         if (fillShape) {
             fill(0, 230);
@@ -204,9 +197,6 @@ public class SpringEmbedder extends ProcessingApp {
         eames();
         //fruchtermanReingold();
 
-        if (video != null) {
-            video.saveFrame();
-        }
         pop();
     }
 
@@ -236,18 +226,12 @@ public class SpringEmbedder extends ProcessingApp {
     public void keyPressed() {
         super.keyPressed();
         switch (key) {
-            case 'r':
+            case 's':
                 noiseResample(true); break;
             case 'd':
                 drawPoints = !drawPoints; break;
             case 'f':
                 fillShape = !fillShape; break;
-            case 'v':
-                if (video != null) {
-                    video.endMovie();
-                    video = null;
-                }
-                break;
         }
     }
 

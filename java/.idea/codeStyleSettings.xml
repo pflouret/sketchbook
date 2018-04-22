@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectCodeStyleSettingsManager">
+    <option name="PER_PROJECT_SETTINGS">
+      <value>
+        <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="1000" />
+        <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="1000" />
+        <codeStyleSettings language="JAVA">
+          <option name="SPACE_AROUND_ADDITIVE_OPERATORS" value="false" />
+          <option name="SPACE_AROUND_MULTIPLICATIVE_OPERATORS" value="false" />
+          <indentOptions>
+            <option name="CONTINUATION_INDENT_SIZE" value="4" />
+          </indentOptions>
+        </codeStyleSettings>
+      </value>
+    </option>
+    <option name="USE_PER_PROJECT_SETTINGS" value="true" />
+  </component>
+</project>

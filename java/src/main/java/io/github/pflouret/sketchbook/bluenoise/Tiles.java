@@ -117,7 +117,7 @@ public class Tiles extends ProcessingApp {
     }
 
     @Override
-    public void draw() {
+    public void drawInternal() {
         clear();
         tiles.forEach(Tile::draw);
     }
