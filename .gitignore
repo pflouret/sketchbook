@@ -8,6 +8,7 @@ screenshots/
 stuff/
 tools/
 build/
+out/
 
 .idea/
 .gradle/
