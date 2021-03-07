@@ -1,0 +1,35 @@
+group 'io.github.pflouret'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.15
+
+repositories {
+    mavenCentral()
+    maven { url "http://repository.openmindonline.it/" }
+    maven { url "https://repo.spring.io/plugins-release/" }
+}
+
+dependencies {
+    compile "org.jgrapht:jgrapht-core:1.5.0"
+    compile "org.jgrapht:jgrapht-demo:1.5.0"
+    compile "org.jgrapht:jgrapht-io:1.5.0"
+    compile group: 'org.apache.xmlgraphics', name: 'batik-parser', version: '1.14'
+    compile group: 'org.apache.xmlgraphics', name: 'batik-svggen', version: '1.14'
+    compile group: 'org.apache.xmlgraphics', name: 'batik-svg-dom', version: '1.14'
+    compile group: 'org.apache.batik', name: 'org.apache.batik.dom', version: '1.6.0-20081006'
+    compile group: 'org.apache.batik', name: 'org.apache.batik.dom.svg', version: '1.6.0-20081006'
+    compile group: 'org.apache.batik', name: 'org.apache.batik.util', version: '1.6.0-20081006'
+    compile group: 'xerces', name: 'xercesImpl', version: '2.12.1'
+    compile 'com.google.guava:guava:30.1-jre'
+
+    compileOnly 'org.projectlombok:lombok:1.18.16'
+    annotationProcessor 'org.projectlombok:lombok:1.18.16'
+
+    compile fileTree(dir: "lib", include: "**/*.jar")
+
+//    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.1'
+//    compile 'org.apache.commons:commons-math3:3.6.1'
+
+}
