@@ -12,6 +12,7 @@ require 'rgl/traversal'
 ZOOM = 19
 NAIVE_MERGE = false
 OUT_FILENAME = 'out.svg'
+OUT_REF_FILENAME = 'out-ref.svg'
 
 ALLOWED_HIGHWAY_TYPES = [
   'living_street',
@@ -22,13 +23,13 @@ ALLOWED_HIGHWAY_TYPES = [
   'service', # (filter n of nodes)
   'tertiary',
   'trunk',
+  'footway',
+  'pedestrian',
   #'construction',
   #'corridor',
   #'cycleway',
-  #'footway',
   #'motorway_link', # maybe
   #'path',
-  #'pedestrian',
   #'platform',
   #'primary_link',
   #'proposed',
@@ -157,6 +158,8 @@ data = open(ARGV[0]) { |f| JSON.parse(f.read, symbolize_names: true) }[:elements
 ways = data
   .select { |d| d.type == 'way' && d.tags[:name] && ALLOWED_HIGHWAY_TYPES.include?(d.tags[:highway]) }
   .reject { |d| d.tags[:highway] == 'service' && d.nodes.size < 10 }
+  .reject { |d| d.tags[:highway] == 'pedestrian' && d.nodes.size < 10 }
+  .reject { |d| d.tags[:highway] == 'footway' && d.nodes.size < 10 }
 
 nodes = data
   .select { |d| d.type == 'node' }
@@ -207,6 +210,11 @@ if NAIVE_MERGE
   end
   save_flat(OUT_FILENAME, node_paths)
 else
+  ref_ways = ways.map do |mw|
+    mw.nodes.map { |n| project(nodes[n].lat, nodes[n].lon, ZOOM) }
+  end
+  save_flat(OUT_REF_FILENAME, ref_ways)
+
   merged_ways.each do |mw|
     mw.node_paths = mw.node_paths.map do |path|
       path.map { |n| project(nodes[n].lat, nodes[n].lon, ZOOM) }
