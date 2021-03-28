@@ -2,6 +2,7 @@ require 'json'
 require 'ostruct'
 require 'pry'
 require 'pry-byebug'
+require 'securerandom'
 require 'set'
 
 require 'rgl/adjacency'
@@ -29,7 +30,7 @@ ALLOWED_HIGHWAY_TYPES = [
   #'corridor',
   #'cycleway',
   #'motorway_link', # maybe
-  #'path',
+  'path',
   #'platform',
   #'primary_link',
   #'proposed',
@@ -38,9 +39,9 @@ ALLOWED_HIGHWAY_TYPES = [
   #'services',
   #'steps',
   #'tertiary_link',
-  #'track', # tracktype=grade3 ?
+  'track', # tracktype=grade3 ?
   #'trunk_link',
-  #'unclassified'
+  'unclassified'
 ].to_set.freeze
 
 def merge(ways_by_id)
@@ -121,7 +122,7 @@ def save(filename, merged_ways)
     merged_ways.each do |mw|
       mw.node_paths.each do |path|
         s = path.map { |p| "#{p[0]-min_x} #{p[1]-min_y}" }.join(' ')
-        f << %(<path id="#{mw.id}" d="M#{s}"/>\n)
+        f << %(<path name=#{mw.id.encode(xml: :attr)} d="M#{s}"/>\n)
       end
     end
     f << "</g></svg>"
@@ -213,24 +214,32 @@ def naive_merge(merged_ways)
   node_paths
 end
 
+def filter_ways(data)
+  data
+    .select { |d| d.type == 'way' && d.tags[:name] && ALLOWED_HIGHWAY_TYPES.include?(d.tags[:highway]) }
+    .reject { |d| d.tags[:highway] == 'footway' && d.tags[:footway] =~ /sidewalk|crossing/ }
+    .reject { |d| d.tags[:highway] == 'service' && d.nodes.size < 10 }
+    .reject { |d| d.tags[:highway] == 'pedestrian' && d.nodes.size < 10 }
+end
+
+def filter_ways_custom_query(data)
+  data.select { |d| d.type == 'way' && ALLOWED_HIGHWAY_TYPES.include?(d.tags[:highway]) }
+end
 
 
 
 data = open(ARGV[0]) { |f| JSON.parse(f.read, symbolize_names: true) }[:elements]
   .map(&OpenStruct.method(:new))
 
-ways = data
-  .select { |d| d.type == 'way' && d.tags[:name] && ALLOWED_HIGHWAY_TYPES.include?(d.tags[:highway]) }
-  .reject { |d| d.tags[:highway] == 'service' && d.nodes.size < 10 }
-  .reject { |d| d.tags[:highway] == 'pedestrian' && d.nodes.size < 10 }
-  .reject { |d| d.tags[:highway] == 'footway' && d.nodes.size < 10 }
+#ways = filter_ways(data)
+ways = filter_ways_custom_query(data)
 
 nodes = data
   .select { |d| d.type == 'node' }
   .reduce({}) { |m, d| m.merge!(d.id => d) }
 
 ways_by_id = ways
-  .map { |w| OpenStruct.new(id: w.tags[:name], nodes: w.nodes) }
+  .map { |w| OpenStruct.new(id: w.tags[:name] || w.id.to_s, nodes: w.nodes) }
   .group_by(&:id)
 
 merged_ways = merge(ways_by_id)
