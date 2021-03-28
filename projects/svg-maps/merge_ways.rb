@@ -43,6 +43,67 @@ ALLOWED_HIGHWAY_TYPES = [
   #'unclassified'
 ].to_set.freeze
 
+def merge(ways_by_id)
+  # Merge all the different segments of the same way
+  ways_by_id.map do |id, way_group|
+    # (first,last) nodes -> way object
+    edge_index = way_group.reduce({}) do |acc, s|
+      if s.nodes.first == s.nodes.last
+        # Just get rid of closed trails, too lazy to deal with properly.
+        s.nodes.pop
+      end
+      acc.merge!([s.nodes.first, s.nodes.last].to_set => s)
+    end
+
+    g = RGL::AdjacencyGraph.new
+    g.add_edges(*edge_index.keys.map(&:to_a))
+
+    seen = Set.new
+    node_paths = []
+    g.each_connected_component do |vertices|
+      # Traverse and collect a trail
+      forks = [vertices.find { |v| g.out_degree(v) == 1 } || vertices.first]
+      until forks.empty?
+        v = forks.shift
+        vertex_path = [v]
+        until v.nil?
+          seen << v
+          adj = g.adjacent_vertices(v).reject { |w| seen.include?(w) }
+          cycle_vertex = g.adjacent_vertices(v).find { |w| vertex_path[0...-2].include?(w) }
+          unless cycle_vertex.nil?
+            # Add the segment that completes the cycle.
+            node_paths << build_node_path([v, cycle_vertex], edge_index)
+          end
+          forks << v if adj.size > 1
+          v = adj.shift
+          vertex_path << v unless v.nil?
+        end
+
+        node_paths << build_node_path(vertex_path, edge_index)
+      end
+    end
+    OpenStruct.new(id: id, node_paths: node_paths.reject(&:nil?))
+  end
+end
+
+def build_node_path(vertex_path, edge_index)
+  # Group as (first,last) nodes
+  segments = vertex_path
+    .zip(vertex_path[1..-1])[0...-1]
+    .map { |a| edge_index[a.to_set] }
+    .reject(&:nil?)
+
+  return if segments.empty?
+
+  # Merge all segments into the first (they might've been reversed)
+  first_segment = segments.first.nodes.first == vertex_path.first ?
+    segments.first.nodes:
+    segments.first.nodes.reverse
+  segments[1..-1].reduce(first_segment) do |a, s|
+    a + (a.last == s.nodes.first ? s.nodes : s.nodes.reverse)
+  end
+end
+
 def save(filename, merged_ways)
   open(filename, 'w') do |f|
     f << <<~END
@@ -152,6 +213,9 @@ def naive_merge(merged_ways)
   node_paths
 end
 
+
+
+
 data = open(ARGV[0]) { |f| JSON.parse(f.read, symbolize_names: true) }[:elements]
   .map(&OpenStruct.method(:new))
 
@@ -169,39 +233,7 @@ ways_by_id = ways
   .map { |w| OpenStruct.new(id: w.tags[:name], nodes: w.nodes) }
   .group_by(&:id)
 
-# Merge all the different segments of the same way
-merged_ways = ways_by_id.map do |id, way_group|
-  # (first,last) nodes -> way object
-  edge_index = way_group.reduce({}) do |acc, s|
-    if s.nodes.first == s.nodes.last
-      # Just get rid of closed trails, too lazy to deal with properly.
-      s.nodes.pop
-    end
-    acc.merge!([s.nodes.first, s.nodes.last].to_set => s)
-  end
-
-  g = RGL::AdjacencyGraph.new
-  g.add_edges(*edge_index.keys.map(&:to_a))
-
-  node_paths = []
-  g.each_connected_component do |vertices|
-    # Traverse and collect a trail
-    start = vertices.find { |v| g.out_degree(v) == 1 } || vertices.first
-    vertex_path = g.dfs_iterator(start).to_a
-
-    # Group as (first,last) nodes
-    segments = vertex_path
-      .zip(vertex_path[1..-1])[0...-1]
-      .map { |a| edge_index[a.to_set] }
-      .reject(&:nil?)
-
-    # Merge all segments into the first (they might've been reversed)
-    node_paths << segments[1..-1].reduce(segments.first.nodes) do |a, s|
-      a + (a.last == s.nodes.first ? s.nodes : s.nodes.reverse)
-    end
-  end
-  OpenStruct.new(id: id, node_paths: node_paths)
-end
+merged_ways = merge(ways_by_id)
 
 # Convert path from node_id to mercator-projected [x,y]
 if NAIVE_MERGE
