@@ -7,7 +7,6 @@ GEM
     generator (0.0.1)
     graphviz (1.2.1)
       process-pipeline
-    hashie (4.1.0)
     lazy_priority_queue (0.1.1)
     method_source (1.0.0)
     mustache (1.1.1)
@@ -34,7 +33,6 @@ PLATFORMS
 
 DEPENDENCIES
   graphviz
-  hashie
   mustache
   pry-byebug
   rgl

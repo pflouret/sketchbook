@@ -1,12 +1,12 @@
 require 'json'
+require 'mustache'
 require 'ostruct'
 require 'pry'
 require 'pry-byebug'
 require 'set'
-require 'mustache'
 
 ZOOM = 19
-OUT_FILENAME = 'out.svg'
+SAVE_REF = false
 
 def run(data_path)
   data = open(data_path) { |f| JSON.parse(f.read, symbolize_names: true) }[:elements]
@@ -25,56 +25,78 @@ def run(data_path)
   rels_by_ends = (rels_by_ref.delete(nil) || [])
     .group_by { |r| [r.tags[:from], r.tags[:to]].to_set }
 
-  stops = data
-    .select { |n| n.type == 'node' }
-    .reject { |n| n.tags&.dig(:name).nil? }
+  basename = File.basename(data_path, '.json')
 
-  names = rels_by_ref.map { [_1, _2.map { |r| r.tags[:name] } ] }.to_h
-  #binding.pry
+  save("#{basename}-ref.svg", rels.map { build_draw_objs(_1) }.flatten(1)) if SAVE_REF
 
-  if true
-    node_paths = rels.map do |rel|
-      get_node_paths(rel)
-    end.flatten(1)
-  else
-    node_paths = rels_by_ref.map do |name, rels|
-      get_node_paths(rels.first)
-    end.flatten(1)
+  draw_objs =
+    rels_by_ref.map { |ref, rels| build_draw_objs(rels.first) }.flatten(1) +
+    rels_by_ends.map { |ends, rels| build_draw_objs(rels.first) }.flatten(1)
 
-    node_paths += rels_by_ends.map do |ends, rels|
-      get_node_paths(rels.first)
-    end.flatten(1)
-  end
-
-  node_paths = node_paths.map do |path|
-    path.map { |n| project(n.lat, n.lon, ZOOM) }
-  end
-
-  save("#{File.basename(data_path, '.json')}.svg", node_paths)
+  save("#{basename}.svg", draw_objs)
 end
 
-def get_node_paths(rel)
-  rel.members
+def build_draw_objs(rel)
+  lines = rel.members
     .select { |e| e[:type] == 'way' && e[:role].empty? }
     .map { |e| $ways[e[:ref]] }
     .map { |w| w.nodes.map { |n| $nodes[n] } }
+
+  stops = rel.members
+    .select { |e| e[:type] == 'node' && e[:role] == 'stop' }
+    .map { |e| $nodes[e[:ref]] }
+
+  platforms = rel.members
+    .select { |e| e[:type] == 'way' && e[:role] == 'platform' }
+    .map { |e| $ways[e[:ref]] }
+    .map { |w| w.nodes.map { |n| $nodes[n] } }
+
+  OpenStruct.new(
+    rel: rel,
+    lines: lines,
+    stops: stops,
+    platforms: platforms
+  )
 end
 
 class Subway < Mustache
   self.template_path = __dir__
 end
 
-def save(filename, node_paths)
-  points = node_paths.flatten(1)
+def save(filename, draw_objs)
+  draw_objs.each do |o|
+    o.lines = o.lines.map do |path|
+      path.map { |n| project(n.lat, n.lon, ZOOM) }
+    end
+    o.stops = o.stops.map do |n|
+      project(n.lat, n.lon, ZOOM)
+    end
+  end
+
+  points = draw_objs.map(&:lines).flatten(2)
   xx, yy = points.map { |p| p[0] }, points.map { |p| p[1] }
   min_x, min_y = xx.min, yy.min
 
   t = Subway.new
-  t[:paths] =
-    node_paths.map do |path|
-      s = path.map { |p| "#{p[0]-min_x} #{p[1]-min_y}" }.join(' ')
-      %(<path d="M#{s}"/>)
-    end.join("\n    ")
+  t[:groups] =
+    draw_objs.map do |o|
+      color = o.rel.tags[:colour] || 'black'
+      ref = o.rel.tags[:ref].encode(xml: :text)
+      lines = o.lines.map do |path|
+        s = path.map { |p| "#{p[0]-min_x} #{p[1]-min_y}" }.join(' ')
+        %(<path d="M#{s}"/>)
+      end.join("\n    ")
+      stops = o.stops.map do |p|
+        %(<circle cx="#{p[0]-min_x}" cy="#{p[1]-min_y}" r="1"/>)
+      end.join("\n    ")
+      <<~END
+        <g inkscape:label="#{color}: #{ref}" inkscape:groupmode="layer" stroke="#{color}" stroke-width="1" fill="none">
+            #{lines}
+            #{stops}
+          </g>
+      END
+    end
+    .join("\n  ")
 
   open(filename, 'w') { |f| f << t.render }
 end

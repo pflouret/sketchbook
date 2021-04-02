@@ -1,7 +1,6 @@
 source 'https://rubygems.org'
 
 gem 'pry-byebug'
-gem 'hashie'
 gem 'rgl'
 gem 'graphviz'
 gem 'mustache'

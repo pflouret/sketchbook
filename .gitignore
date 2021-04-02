@@ -10,5 +10,7 @@ tools/
 build/
 out/
 
+/projects/svg-maps/*.svg
+
 .idea/
 .gradle/
