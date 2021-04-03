@@ -105,7 +105,7 @@ public class OffsetStripes extends ProcessingApp {
     }
 
     @Override
-    public void draw() {
+    public void drawInternal() {
         clear();
 
         if (looping) {
@@ -124,7 +124,7 @@ public class OffsetStripes extends ProcessingApp {
     @Override
     public void keyPressed() {
         switch (key) {
-            case 'R':
+            case 'r':
                 reset();
                 redraw();
                 break;

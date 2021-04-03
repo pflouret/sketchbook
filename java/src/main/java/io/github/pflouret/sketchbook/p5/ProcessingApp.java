@@ -194,7 +194,7 @@ public class ProcessingApp extends PAppletHack {
   public String getSketchFilename(String format) {
     String sketchName = this.getClass().getSimpleName().toLowerCase();
     String home = System.getProperty("user.home");
-    File folder = new File(home + "/Dropbox/sketchout/" + sketchName);
+    File folder = new File(home + "/Genart/sketchout/" + sketchName);
     folder.mkdirs();
 
     String filename =
