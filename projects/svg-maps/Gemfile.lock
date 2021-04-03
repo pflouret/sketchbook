@@ -3,6 +3,7 @@ GEM
   specs:
     byebug (11.1.3)
     coderay (1.1.3)
+    color (1.8)
     ffi (1.15.0)
     generator (0.0.1)
     graphviz (1.2.1)
@@ -32,6 +33,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  color
   graphviz
   mustache
   pry-byebug

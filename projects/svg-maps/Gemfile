@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'pry-byebug'
-gem 'rgl'
+gem 'color'
 gem 'graphviz'
 gem 'mustache'
+gem 'pry-byebug'
+gem 'rgl'
