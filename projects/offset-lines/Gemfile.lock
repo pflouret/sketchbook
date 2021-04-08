@@ -1,0 +1,39 @@
+PATH
+  remote: /Users/pablo_flouret/Code/nih/fast_noise_ruby
+  specs:
+    fast_noise (0.2.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    byebug (11.1.3)
+    clipper (2.9.1)
+    cmath (1.0.0)
+    coderay (1.1.3)
+    geometry (6.5)
+    mathn (0.1.0)
+    method_source (1.0.0)
+    mustache (1.1.1)
+    perlin (0.2.2)
+    pry (0.13.1)
+      coderay (~> 1.1)
+      method_source (~> 1.0)
+    pry-byebug (3.9.0)
+      byebug (~> 11.0)
+      pry (~> 0.13.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  clipper
+  cmath
+  fast_noise!
+  geometry
+  mathn
+  mustache
+  perlin
+  pry-byebug
+
+BUNDLED WITH
+   2.1.4

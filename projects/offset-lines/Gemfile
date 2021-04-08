@@ -1,0 +1,10 @@
+source 'https://rubygems.org'
+
+gem 'clipper'
+gem 'cmath'
+gem 'fast_noise', path: '/Users/pablo_flouret/Code/nih/fast_noise_ruby'
+gem 'geometry'
+gem 'mathn'
+gem 'mustache'
+gem 'pry-byebug'
+gem 'perlin'
