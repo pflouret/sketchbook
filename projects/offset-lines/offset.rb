@@ -7,6 +7,7 @@ require 'pry'
 require 'pry-byebug'
 require 'set'
 
+DEBUG = false
 NUM_RUNS = 1
 DEFAULT_OUTPUT_PATH = '~/Genart/sketchout/offsetstripes/svg'
 
@@ -18,7 +19,7 @@ $seed = rand(2**31)
 $yoff = 0
 
 def set_globals
-  $stripe_width = rand(3..9)
+  $stripe_width = rand(3..6)
   $stripe_offset = rand(0.3..$stripe_width.to_f)
   #560x794
 
@@ -28,7 +29,7 @@ def set_globals
   #$noise.fractal_lacunarity = 3.0
   #$noise.fractal_gain = 0.01
   #$noise.frequency = 0.5
-  $noise_x_multiplier = 1
+  $noise_x_multiplier = 1.5
 end
 
 def run
@@ -67,7 +68,7 @@ def build_polys
     curves << (0..$width).map do |x|
       [x, mapn($noise.noise(x*$noise_x_multiplier, $yoff), -1, 1, y0, y0+200)]
     end
-    y0 += rand(200)
+    y0 += rand(150)
     $yoff += rand(1000)
   end
   curves << [[0, $height], [$width, $height]]
@@ -76,6 +77,7 @@ def build_polys
 end
 
 def build_filename
+  return "a.svg" if DEBUG
   stamp = Time.now.strftime("%Y-%m-%d_%H%M%S_%6N")
   File.join(
     File.expand_path($out_path),
@@ -88,17 +90,26 @@ class Offset < Mustache
 end
 
 def save(filename, clipped)
+  x0 = 40
+  y0 = 57
+
   path_layers = clipped.map do |polys_layer|
     polys_layer.map do |poly|
         s = poly.map { |p| "#{p[0]} #{p[1]}" }.join(" ")
-        %(<path d="M#{s} Z" fill="black" stroke="black"/>)
+        %(<path d="M#{s} Z"/>)
     end.join("\n")
   end
 
   t = Offset.new
+  t[:border] = <<~END
+    <g inkscape:label="border" inkscape:groupmode="layer" stroke="#000" fill="none">
+      <line x1="#{x0}" y1="#{y0}" x2="#{x0}" y2="#{$height-y0}" stroke="black" />
+      <line x1="#{$width-x0}" y1="#{y0}" x2="#{$width-x0+$stripe_offset}" y2="#{$height-y0}" stroke="black" />
+    </g>
+  END
   t[:groups] = path_layers.map do |paths|
     <<~END
-      <g inkscape:label="stripes" inkscape:groupmode="layer" stroke="none" transform="translate(40,57)">
+      <g inkscape:label="stripes" inkscape:groupmode="layer" fill="black" stroke="black" transform="translate(#{x0}, #{y0})">
           #{paths}
         </g>
     END
@@ -138,5 +149,6 @@ OptionParser.new do |opts|
   opts.on("-s", "--seed [N]", "RNG seed") { |n| $seed = n.to_i }
 end.parse!
 
+srand($seed)
 puts "seed: #{$seed}\n"
 $num_runs.times { run }
