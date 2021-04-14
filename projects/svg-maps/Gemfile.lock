@@ -36,6 +36,7 @@ DEPENDENCIES
   color
   graphviz
   mustache
+  pry
   pry-byebug
   rgl
 
