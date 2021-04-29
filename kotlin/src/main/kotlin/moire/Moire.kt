@@ -4,23 +4,22 @@ import com.sun.glass.ui.Size
 import controlP5.ControlListener
 import controlP5.ControlP5
 import javafx.scene.paint.Color
-import lombok.Data
 import midi.Op1
 import midi.Op1.*
 import p5.ProcessingAppK
 import processing.core.PApplet
 import processing.core.PConstants
 import processing.core.PVector
+import processing.event.KeyEvent
 import processing.event.MouseEvent
 import kotlin.math.roundToInt
 
 class Moire : ProcessingAppK() {
-    @Data
-    class Params(
-        var radiusStep: Float = 0.005f,
+    data class Params(
+        var radiusStep: Float = ANGLE_STEP / 2,
         var modStep: Float = 0.01f,
         var center: PVector = PVector(SIZE.width/2f, SIZE.height/2f),
-        var revolutions: Int = 50 //(SIZE.width.coerceAtMost(SIZE.height) / 2 / (1 + radiusStep)).toInt()
+        var revolutions: Int = 50
     )
 
     var shapeParams: MutableList<Params> = mutableListOf()
@@ -34,12 +33,10 @@ class Moire : ProcessingAppK() {
     override fun setup() {
         super.setup()
 
-        background(255)
-        stroke(0)
-        noLoop()
         noiseDetail(2, 0.3f)
-        addShape()
 
+        noLoop()
+        addShape()
         setupOp1()
 //        ControlFrame(this, 300, 500)
     }
@@ -53,7 +50,7 @@ class Moire : ProcessingAppK() {
         mods = generateSequence(0f) { it }
 
         return (angles zip radii zip mods)
-            .take((2 * p.revolutions * Math.PI / 0.01f).roundToInt())
+            .take((p.revolutions * 2 * Math.PI / ANGLE_STEP).roundToInt())
             .map { Triple(it.first.first, it.first.second, it.second) }
             .map(
                 fun(triple): PVector {
@@ -66,7 +63,11 @@ class Moire : ProcessingAppK() {
     }
 
     override fun drawInternal() {
-        background(255)
+        if (!record) {
+            background(255)
+        }
+        noFill()
+        stroke(0)
         shapeParams.withIndex().forEach {
             push()
             if (colorCurrent && !record && it.index == current) {
@@ -74,7 +75,7 @@ class Moire : ProcessingAppK() {
             }
             beginShape()
             translate(it.value.center.x, it.value.center.y)
-            buildSpiral(it.value).map(this::vertex)
+            buildSpiral(it.value).map(this::curveVertex)
             endShape()
             pop()
         }
@@ -105,10 +106,7 @@ class Moire : ProcessingAppK() {
     override fun op1ControllerChangeRel(cc: Op1, channel: Int, value: Int) {
         val p = shapeParams[current]
         when (cc) {
-            BLUE_KNOB -> {
-                p.radiusStep += value * 0.00005f
-                p.revolutions += -1*value
-            }
+            BLUE_KNOB -> p.radiusStep += value * 0.0005f
             GREEN_KNOB -> p.revolutions += value
             WHITE_KNOB -> p.center.add(value.toFloat(), 0f)
             ORANGE_KNOB -> p.center.add(0f, value.toFloat())
@@ -119,16 +117,45 @@ class Moire : ProcessingAppK() {
         }
     }
 
+
+    override fun keyTyped(e: KeyEvent) {
+        when(e.key) {
+            in KEY_TO_KNOB -> {
+                val pair = KEY_TO_KNOB[e.key]!!
+                op1ControllerChangeRel(pair.first, 0, pair.second)
+            }
+            in KEY_TO_BUTTON -> op1ControllerChangeRel(KEY_TO_BUTTON[e.key]!!, 0, 1)
+            else -> return
+        }
+        redraw()
+    }
+
     private fun addShape() {
         shapeParams.add(Params())
         current = shapeParams.size - 1
     }
 
     private fun vertex(v: PVector) = vertex(v.x, v.y)
+    private fun curveVertex(v: PVector) = curveVertex(v.x, v.y)
 
     companion object {
         val SIZE = Size(461, 699)
-        const val ANGLE_STEP = 0.009f
+        const val ANGLE_STEP = 0.3f
+
+        private val KNOB_TO_KEYS = mapOf(
+            BLUE_KNOB to Pair('a', 'z'),
+            GREEN_KNOB to Pair('s', 'x'),
+            WHITE_KNOB to Pair('l', 'j'),
+            ORANGE_KNOB to Pair('k', 'i')
+        )
+
+        private val KEY_TO_KNOB = KNOB_TO_KEYS.entries
+            .map { (knob, keys) -> listOf(keys.first to (knob to 1), keys.second to (knob to -1)) }
+            .flatten()
+            .toMap()
+
+        private val KEY_TO_BUTTON = mapOf('1' to BLUE, '2' to GREEN, '3' to HELP, '4' to REC)
+
         fun run() = Moire().runSketch()
     }
 }
