@@ -41,6 +41,7 @@ open class ProcessingAppK : ProcessingApp() {
         when(cc) {
             Op1.REC -> record = true
             Op1.MIC -> exit()
+            Op1.STOP -> reset()
             else -> return
         }
     }

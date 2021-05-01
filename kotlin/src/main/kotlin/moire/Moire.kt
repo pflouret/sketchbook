@@ -1,13 +1,10 @@
 package moire
 
 import com.sun.glass.ui.Size
-import controlP5.ControlListener
-import controlP5.ControlP5
 import javafx.scene.paint.Color
 import midi.Op1
 import midi.Op1.*
 import p5.ProcessingAppK
-import processing.core.PApplet
 import processing.core.PConstants
 import processing.core.PVector
 import processing.event.KeyEvent
@@ -42,7 +39,6 @@ class Moire : ProcessingAppK() {
         noLoop()
         addShape()
         setupOp1()
-//        ControlFrame(this, 300, 500)
     }
 
     private fun buildSpiral(p: Params): List<PVector> {
@@ -93,14 +89,6 @@ class Moire : ProcessingAppK() {
             endShape()
             pop()
         }
-    }
-
-    fun setRadiusStepForCurrent(step: Float): Unit {
-        shapeParams[current].radiusStep = step
-    }
-
-    fun getRadiusStepForCurrent(): Float {
-        return shapeParams[current].radiusStep
     }
 
     override fun mouseClicked(e: MouseEvent) {
@@ -203,47 +191,6 @@ class Moire : ProcessingAppK() {
         private val KEY_TO_BUTTON = mapOf('1' to BLUE, '2' to GREEN, '3' to HELP, '4' to REC)
 
         fun run() = Moire().runSketch()
-    }
-}
-
-internal class ControlFrame(
-    private val parent: Moire, private val w: Int, private val h: Int
-) : PApplet() {
-    private var cp: ControlP5? = null
-    override fun settings() {
-        size(w, h)
-    }
-
-    override fun setup() {
-        surface.setLocation(10, 10)
-
-        cp = ControlP5(this)
-        val g1 = cp!!.addGroup("g1")
-        cp!!.addSlider("radius step")
-            .setRange(0f, 0.02f)
-            .setDecimalPrecision(4)
-            .setValue(parent.getRadiusStepForCurrent())
-            .plugTo(parent, "setRadiusStepForCurrent")
-            .setSize(200, 30)
-            .setPosition(5f, 56f)
-            .setGroup(g1)
-        cp!!.addBang("reset")
-            .setPosition(5f, 101f)
-            .setSize(20, 20)
-            .setGroup(g1)
-            .plugTo(parent, "reset")
-        cp!!.addListener(ControlListener {
-            parent.postEvent(MouseEvent(parent, 0, MouseEvent.CLICK, 0, -1, -1, -1, 1))
-        })
-    }
-
-    override fun draw() {
-        background(0)
-    }
-
-
-    init {
-        runSketch(arrayOf(this.javaClass.name), this)
     }
 }
 
