@@ -16,9 +16,11 @@ enum class PaperSize(val size: Size) {
     A6(396, 559),
     B5(665, 944),
     B6(472, 665),
-    KIKU4(858, 1156);
+    KIKU4(858, 1156),
+    ORIGAMI_150(566, 566)
+    ;
 
-    constructor(width: Int, height: Int): this(Size(width, height))
+    constructor(width: Int, height: Int) : this(Size(width, height))
 }
 
 open class ProcessingAppK : ProcessingApp() {
@@ -38,7 +40,7 @@ open class ProcessingAppK : ProcessingApp() {
 
     open fun op1ControllerChangeAbs(cc: Op1, channel: Int, value: Int) {}
     open fun op1ControllerChangeRel(cc: Op1, channel: Int, value: Int) {
-        when(cc) {
+        when (cc) {
             Op1.REC -> record = true
             Op1.MIC -> exit()
             Op1.STOP -> reset()
@@ -73,7 +75,7 @@ open class ProcessingAppK : ProcessingApp() {
         }
     }
 
-    fun toRgbHex(color: Color) : Int {
+    fun toRgbHex(color: Color): Int {
         return ((color.opacity * 255).roundToInt() shl 24) +
                 ((color.red * 255).roundToInt() shl 16) +
                 ((color.green * 255).roundToInt() shl 8) +

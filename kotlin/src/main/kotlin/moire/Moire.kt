@@ -4,6 +4,7 @@ import com.sun.glass.ui.Size
 import javafx.scene.paint.Color
 import midi.Op1
 import midi.Op1.*
+import p5.PaperSize
 import p5.ProcessingAppK
 import processing.core.PConstants
 import processing.core.PVector
@@ -23,9 +24,9 @@ class Moire : ProcessingAppK() {
         val noiseSeed: Long
     )
 
-    var shapeParams: MutableList<Params> = mutableListOf()
-    var current = 0
-    var colorCurrent = true
+    private var shapeParams: MutableList<Params> = mutableListOf()
+    private var current = 0
+    private var colorCurrent = true
 
     override fun settings() {
         size(SIZE.width, SIZE.height, FX2D)
@@ -95,7 +96,7 @@ class Moire : ProcessingAppK() {
         if (e.button == PConstants.LEFT) {
             shapeParams[current].center = PVector(mouseX.toFloat(), mouseY.toFloat())
         } else if (e.button == PConstants.RIGHT) {
-            addShape();
+            addShape()
         }
         redraw()
     }
@@ -114,7 +115,7 @@ class Moire : ProcessingAppK() {
             GREEN_KNOB to 0 ->
                 p.revolutions += value
             WHITE_KNOB to 0 ->
-                p.noiseVectorScale += value * 0.0005f
+                p.noiseVectorScale += value * 0.0001f
             ORANGE_KNOB to 0 ->
                 p.noiseScale += value * 0.01f
             BLUE_KNOB to 1 ->
@@ -174,6 +175,7 @@ class Moire : ProcessingAppK() {
 
     companion object {
         val SIZE = Size(461, 699)
+        //  val SIZE = PaperSize.ORIGAMI_150.size
         const val ANGLE_STEP = 0.3f
 
         private val KNOB_TO_KEYS = mapOf(
