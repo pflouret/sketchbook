@@ -17,9 +17,13 @@ import kotlin.math.roundToInt
 class Moire : ProcessingAppK() {
     data class Params(
         var radiusStep: Float = ANGLE_STEP / 2,
-        var modStep: Float = 0.01f,
-        var center: PVector = PVector(SIZE.width/2f, SIZE.height/2f),
-        var revolutions: Int = 50
+        var center: PVector = PVector(SIZE.width / 2f, SIZE.height / 2f),
+        var revolutions: Int = 50,
+        var coordOffset: PVector,
+        var noiseOffset: PVector,
+        var noiseVectorScale: Float,
+        var noiseScale: Float = 0.5f,
+        val noiseSeed: Long
     )
 
     var shapeParams: MutableList<Params> = mutableListOf()
@@ -44,23 +48,33 @@ class Moire : ProcessingAppK() {
     private fun buildSpiral(p: Params): List<PVector> {
         val angles = generateSequence(0f) { it + ANGLE_STEP }
         val radii = generateSequence(0f) { it + p.radiusStep }
-        var mods = generateSequence(random(10000f)) { it + p.modStep }
-            .map(this::noise)
-            .map { it * 5 }
-        mods = generateSequence(0f) { it }
 
-        return (angles zip radii zip mods)
+        return (angles zip radii)
             .take((p.revolutions * 2 * Math.PI / ANGLE_STEP).roundToInt())
-            .map { Triple(it.first.first, it.first.second, it.second) }
-            .map(
-                fun(triple): PVector {
-                    val a = triple.first
-                    val r = triple.second
-                    val mod = triple.third
-                    return PVector(mod + r * cos(a), mod + r * sin(a))
-                })
+            .map { PVector(it.second * cos(it.first), it.second * sin(it.first)) }
             .toList()
     }
+
+    private fun buildPerlinSpiral(p: Params): List<PVector> {
+        val spiral = mutableListOf<PVector>()
+        noiseSeed(p.noiseSeed)
+
+        var a = 0f
+        var r = 0f
+        val totalSteps = (p.revolutions * 2 * PI / ANGLE_STEP).roundToInt()
+        for (i in 0..totalSteps) {
+            val noisePosition = spiralCoord(a, r).mult(p.noiseVectorScale).add(p.noiseOffset)
+            val noisyRadius = r - r * (noise(noisePosition) * p.noiseScale)
+            val spiralCoordOffset = p.coordOffset.copy().mult(i.toFloat() / totalSteps)
+            spiral.add(spiralCoord(a, noisyRadius).add(spiralCoordOffset))
+            a += ANGLE_STEP
+            r += p.radiusStep
+        }
+
+        return spiral
+    }
+
+    private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
 
     override fun drawInternal() {
         if (!record) {
@@ -68,14 +82,14 @@ class Moire : ProcessingAppK() {
         }
         noFill()
         stroke(0)
-        shapeParams.withIndex().forEach {
+        shapeParams.withIndex().forEach { (i, p) ->
             push()
-            if (colorCurrent && !record && it.index == current) {
+            if (colorCurrent && !record && i == current) {
                 stroke(toRgbHex(Color.ORANGERED))
             }
             beginShape()
-            translate(it.value.center.x, it.value.center.y)
-            buildSpiral(it.value).map(this::curveVertex)
+            translate(p.center.x, p.center.y)
+            buildPerlinSpiral(p).map(this::curveVertex)
             endShape()
             pop()
         }
@@ -99,27 +113,52 @@ class Moire : ProcessingAppK() {
     }
 
     override fun reset() {
-        shapeParams = mutableListOf(Params())
+        shapeParams = mutableListOf()
         current = 0
+        addShape()
     }
 
     override fun op1ControllerChangeRel(cc: Op1, channel: Int, value: Int) {
         val p = shapeParams[current]
-        when (cc) {
-            BLUE_KNOB -> p.radiusStep += value * 0.0005f
-            GREEN_KNOB -> p.revolutions += value
-            WHITE_KNOB -> p.center.add(value.toFloat(), 0f)
-            ORANGE_KNOB -> p.center.add(0f, value.toFloat())
-            BLUE -> addShape()
-            GREEN -> current = (current + 1) % shapeParams.size
-            HELP -> colorCurrent = !colorCurrent
-            else -> super.op1ControllerChangeRel(cc, channel, value)
+        when (cc to channel) {
+            BLUE_KNOB to 0 ->
+                p.radiusStep += value * 0.0005f
+            GREEN_KNOB to 0 ->
+                p.revolutions += value
+            WHITE_KNOB to 0 ->
+                p.noiseVectorScale += value * 0.0005f
+            ORANGE_KNOB to 0 ->
+                p.noiseScale += value * 0.01f
+            BLUE_KNOB to 1 ->
+                p.coordOffset.x += value * 0.5f
+            GREEN_KNOB to 1 ->
+                p.coordOffset.y += value * 0.5f
+            WHITE_KNOB to 1 ->
+                p.noiseOffset.x += value * 0.05f
+            ORANGE_KNOB to 1 ->
+                p.noiseOffset.y += value * 0.05f
+            BLUE_KNOB to 2 ->
+                p.center.add(value.toFloat(), 0f)
+            GREEN_KNOB to 2 ->
+                p.center.add(0f, value.toFloat())
+            else ->
+                when (cc) {
+                    // Work on any channel
+                    BLUE -> addShape()
+                    GREEN ->
+                        current = (current + 1) % shapeParams.size
+                    HELP ->
+                        colorCurrent = !colorCurrent
+                    else ->
+                        super.op1ControllerChangeRel(cc, channel, value)
+                }
         }
+        println(p)
     }
 
 
     override fun keyTyped(e: KeyEvent) {
-        when(e.key) {
+        when (e.key) {
             in KEY_TO_KNOB -> {
                 val pair = KEY_TO_KNOB[e.key]!!
                 op1ControllerChangeRel(pair.first, 0, pair.second)
@@ -131,12 +170,19 @@ class Moire : ProcessingAppK() {
     }
 
     private fun addShape() {
-        shapeParams.add(Params())
+        shapeParams.add(
+            Params(
+                coordOffset = PVector(random(0f, 3f), random(0f, 3f)),
+                noiseSeed = random(1000000f).toLong(),
+                noiseVectorScale = random(0.002f, 0.008f),
+                noiseOffset = PVector(random(0f, 3f), random(0f, 3f))
+            )
+        )
         current = shapeParams.size - 1
     }
 
-    private fun vertex(v: PVector) = vertex(v.x, v.y)
     private fun curveVertex(v: PVector) = curveVertex(v.x, v.y)
+    private fun noise(v: PVector) = noise(v.x, v.y, v.z)
 
     companion object {
         val SIZE = Size(461, 699)
@@ -145,8 +191,8 @@ class Moire : ProcessingAppK() {
         private val KNOB_TO_KEYS = mapOf(
             BLUE_KNOB to Pair('a', 'z'),
             GREEN_KNOB to Pair('s', 'x'),
-            WHITE_KNOB to Pair('l', 'j'),
-            ORANGE_KNOB to Pair('k', 'i')
+//            WHITE_KNOB to Pair('l', 'j'),
+//            ORANGE_KNOB to Pair('k', 'i')
         )
 
         private val KEY_TO_KNOB = KNOB_TO_KEYS.entries
@@ -160,7 +206,9 @@ class Moire : ProcessingAppK() {
     }
 }
 
-internal class ControlFrame(var parent: Moire, var w: Int, var h: Int) : PApplet() {
+internal class ControlFrame(
+    private val parent: Moire, private val w: Int, private val h: Int
+) : PApplet() {
     private var cp: ControlP5? = null
     override fun settings() {
         size(w, h)

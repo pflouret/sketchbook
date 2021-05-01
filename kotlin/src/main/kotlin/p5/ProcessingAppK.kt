@@ -30,6 +30,7 @@ open class ProcessingAppK : ProcessingApp() {
     }
 
     fun setupOp1(): MidiBus {
+//        MidiBus.list()
         val midibus = MidiBus(this, OP1_DEVICE_NAME, "")
         midi = midibus
         return midibus
