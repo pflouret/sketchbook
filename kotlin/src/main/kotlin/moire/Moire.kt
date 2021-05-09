@@ -4,7 +4,6 @@ import com.sun.glass.ui.Size
 import javafx.scene.paint.Color
 import midi.Op1
 import midi.Op1.*
-import p5.PaperSize
 import p5.ProcessingAppK
 import processing.core.PConstants
 import processing.core.PVector
@@ -84,8 +83,6 @@ class Moire : ProcessingAppK() {
     }
 
     private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
-    private fun curveVertex(v: PVector) = curveVertex(v.x, v.y)
-    private fun noise(v: PVector) = noise(v.x, v.y, v.z)
 
     override fun reset() {
         shapeParams = mutableListOf()
@@ -94,14 +91,14 @@ class Moire : ProcessingAppK() {
     }
 
     override fun drawInternal() {
-        if (!record) {
+        if (!exportNextFrameSvg) {
             background(255)
         }
         noFill()
         stroke(0)
         shapeParams.withIndex().forEach { (i, p) ->
             push()
-            if (colorCurrent && !record && i == current) {
+            if (colorCurrent && !exportNextFrameSvg && i == current) {
                 stroke(toRgbHex(Color.ORANGERED))
             }
             beginShape()

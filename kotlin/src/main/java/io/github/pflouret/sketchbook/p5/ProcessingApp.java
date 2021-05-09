@@ -1,6 +1,5 @@
 package io.github.pflouret.sketchbook.p5;
 
-import com.hamoid.VideoExport;
 import controlP5.ControlP5;
 import java.io.File;
 import java.lang.reflect.Field;
@@ -8,7 +7,6 @@ import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,23 +16,13 @@ import processing.core.PGraphics;
 import processing.core.PImage;
 import processing.core.PStyle;
 import processing.core.PVector;
-import processing.event.KeyEvent;
 
 public class ProcessingApp extends PApplet {
   public static ProcessingApp app;
 
-  protected static final int INITIAL_W = 600;
-  protected static final int INITIAL_H = 600;
-
-  protected int bgColor = color(255);
   protected long seed;
   protected boolean redrawOnEvent = true;
-  protected boolean record = false;
   protected boolean saveVideo = false;
-  private VideoExport video;
-
-  protected int w2;
-  protected int h2;
 
   protected ControlP5 cp;
 
@@ -43,57 +31,6 @@ public class ProcessingApp extends PApplet {
     app = this;
   }
 
-  @Override
-  public void settings() {
-    size(INITIAL_W, INITIAL_H);
-  }
-
-  @Override
-  public void setup() {
-    super.setup();
-
-    clear();
-
-    surface.setResizable(true);
-    surface.setTitle("");
-    noFill();
-    hint(ENABLE_STROKE_PURE);
-
-    resetSeed(true);
-
-    w2 = width / 2;
-    h2 = height / 2;
-
-    if (saveVideo) {
-      video = getVideoExporter();
-      video.startMovie();
-    }
-
-    registerMethod("pre", this);
-  }
-
-  @Override
-  public void draw() {
-    String svgFilename = "";
-
-    if (record) {
-      svgFilename = recordSVG();
-    }
-
-    drawInternal();
-
-    if (record) {
-      endRecord();
-      record = false;
-      pr(svgFilename);
-    }
-
-    if (video != null) {
-      video.saveFrame();
-    }
-  }
-
-  protected void drawInternal() {}
 
   public void pre() {
     processControlEvents();
@@ -103,84 +40,11 @@ public class ProcessingApp extends PApplet {
     println(String.join(" ", Stream.of(args).map(Object::toString).collect(Collectors.toList())));
   }
 
-  public void push() {
-    pushMatrix();
-    pushStyle();
-  }
-
-  public void pop() {
-    popStyle();
-    popMatrix();
-  }
-
-  public void point(PVector p) {
-    point(p.x, p.y);
-  }
-
-  public void clear() {
-    background(bgColor);
-  }
-
-  public void reset() {}
-
-  public void resetSeed(boolean newSeed) {
-    if (newSeed) {
-      seed = (long) random(9999999f);
-    }
-    randomSeed(seed);
-    noiseSeed(seed);
-  }
-
-  public void resetSeed() {
-    resetSeed(false);
-  }
-
-  public void toggleLoop() {
-    if (isLooping()) {
-      noLoop();
-    } else {
-      loop();
-    }
-  }
-
-  public <T> T randomChoice(List<T> list) {
-    return list.isEmpty() ? null : list.get(floor(random(0, list.size())));
-  }
-
-//  public int randomInt(int low, int high) {
-//    return getRandom().nextInt(high - low) + low;
-//  }
-
-  public PVector randomPoint() {
-    return new PVector(random(0, width), random(0, height));
-  }
-
   public boolean prob(double probability) {
     return random(1) < probability;
   }
 
-  public void screenshot(PGraphics g) {
-    saveFrame(getSketchFilename("%s_####.png"));
-  }
-
-  public void screenshot() {
-    screenshot(getGraphics());
-  }
-
-  public String recordSVG() {
-    String sketchFilename = getSketchFilename("%s_####.svg");
-    beginRecord(SVG, sketchFilename);
-    return sketchFilename;
-  }
-
-  public VideoExport getVideoExporter() {
-    VideoExport video = new VideoExport(this, getSketchFilename("%s.mp4"));
-    video.setFrameRate(60);
-    video.setDebugging(false);
-    return video;
-  }
-
-  public String getSketchFilename(String format) {
+  public String makeSketchFilename(String format) {
     String sketchName = this.getClass().getSimpleName().toLowerCase();
     String home = System.getProperty("user.home");
     File folder = new File(home + "/Genart/sketchout/" + sketchName);
@@ -192,46 +56,6 @@ public class ProcessingApp extends PApplet {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss_S")));
 
     return folder.toPath().resolve(filename).toAbsolutePath().toString();
-  }
-
-  @Override
-  public void keyTyped(KeyEvent e) {
-    switch (e.getKey()) {
-      case 'c':
-        clear();
-        break;
-      case 'r':
-        reset();
-        break;
-      case 'R':
-        record = true;
-        redraw();
-        break;
-      case 'V':
-        if (video != null) {
-          video.endMovie();
-          video = null;
-        }
-        break;
-      case 'p':
-        toggleLoop();
-        break;
-      case 'S':
-        screenshot();
-        break;
-      case 'h':
-        toggleGuiVisibility();
-        break;
-      default:
-    }
-
-    if (redrawOnEvent) {
-      redraw();
-    }
-  }
-
-  public void repeat(int n, Runnable block) {
-    IntStream.range(0, n).forEach(i -> block.run());
   }
 
   public void buildGui() {
