@@ -20,10 +20,15 @@ enum class PaperSize(val size: Size) {
     B5(665, 944),
     B6(472, 665),
     KIKU4(858, 1156),
-    ORIGAMI_150(566, 566)
+    ORIGAMI_150(566, 566),
+    CAHIER_XL(720, 936),
+    INDEX_CARD(288, 480),
+    TRAVELER_PASSPORT(336, 468),
+    POSTCARD(415, 529)
     ;
 
     constructor(width: Int, height: Int) : this(Size(width, height))
+    fun landscape() = Size(size.height, size.width)
 }
 
 open class ProcessingAppK : ProcessingApp() {
@@ -44,8 +49,6 @@ open class ProcessingAppK : ProcessingApp() {
 
     override fun settings() {
         size(800, 800, FX2D)
-        w2 = width / 2f
-        h2 = height / 2f
     }
 
     override fun setup() {
@@ -59,6 +62,8 @@ open class ProcessingAppK : ProcessingApp() {
 
         surface.setResizable(true)
         surface.setTitle(javaClass.simpleName.toLowerCase())
+        w2 = width / 2f
+        h2 = height / 2f
 
         if (saveVideo) {
             video = createVideoExporter().also { it.startMovie() }
