@@ -4,6 +4,8 @@ import com.hamoid.VideoExport
 import com.sun.glass.ui.Size
 import io.github.pflouret.sketchbook.p5.ProcessingApp
 import javafx.scene.paint.Color
+import midi.BS
+import midi.MidiDevice
 import midi.Op1
 import processing.core.PVector
 import processing.event.KeyEvent
@@ -31,6 +33,8 @@ enum class PaperSize(val size: Size) {
     fun landscape() = Size(size.height, size.width)
 }
 
+fun PVector.within(width: Int, height: Int) = x > 0 && x < width && y > 0 && y < height
+
 open class ProcessingAppK : ProcessingApp() {
     var printControllerChanges = true
     var exportNextFrameSvg = false
@@ -42,6 +46,7 @@ open class ProcessingAppK : ProcessingApp() {
 
     companion object {
         const val OP1_DEVICE_NAME = "OP-1 Midi Device"
+        const val BEATSTEP_DEVICE_NAME = "Arturia BeatStep"
     }
 
     open fun drawInternal() {}
@@ -126,28 +131,41 @@ open class ProcessingAppK : ProcessingApp() {
     }
 
     open fun random() = random(1f)
-    open fun randomvector() = PVector(random(width.toFloat()), random(height.toFloat()))
+    open fun randomVector() = PVector(random(width.toFloat()), random(height.toFloat()))
     open fun toggleLoop() = if (isLooping) noLoop() else loop()
     open fun point(v: PVector) = point(v.x, v.y)
     open fun vertex(v: PVector) = vertex(v.x, v.y)
     open fun curveVertex(v: PVector) = curveVertex(v.x, v.y)
     open fun noise(v: PVector) = noise(v.x, v.y, v.z)
     open fun screenshot() = saveFrame(makeSketchFilename("%s_####.png"))
+    fun inViewport(v: PVector) = v.within(width, height)
 
+    fun withShape(block: () -> Unit) {
+        beginShape()
+        block()
+        endShape()
+    }
 
     fun setupOp1(): MidiBus {
-//        MidiBus.list()
         val midibus = MidiBus(this, OP1_DEVICE_NAME, "")
         midi = midibus
         return midibus
     }
 
-    open fun op1ControllerChangeAbs(cc: Op1, channel: Int, value: Int) {}
-    open fun op1ControllerChangeRel(cc: Op1, channel: Int, value: Int) {
+    fun setupBeatStep(): MidiBus {
+        val midibus = MidiBus(this, BEATSTEP_DEVICE_NAME, "")
+        midi = midibus
+        return midibus
+    }
+
+
+    open fun controllerChangeAbs(cc: MidiDevice, channel: Int, value: Int) {}
+    open fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int) {
         when (cc) {
-            Op1.REC -> exportNextFrameSvg = true
-            Op1.MIC -> exit()
-            Op1.STOP -> reset()
+            Op1.REC, BS.PAD_16 -> exportNextFrameSvg = true
+            Op1.STOP, BS.STOP -> exit()
+            Op1.MIC, BS.PAD_8 -> reset()
+            Op1.PLAY, BS.PAD_7 -> toggleLoop()
             else -> return
         }
     }
@@ -156,26 +174,31 @@ open class ProcessingAppK : ProcessingApp() {
     open fun noteOff(channel: Int, pitch: Int, velocity: Int) {}
 
     open fun controllerChange(channel: Int, number: Int, value: Int) {
-        val op1IsAttached = midi?.attachedInputs()?.contains(OP1_DEVICE_NAME) ?: false
-        if (!op1IsAttached) {
+        val attachedInputs = midi?.attachedInputs() ?: return
+        val cc: MidiDevice
+        val relValue: Int
+
+        when {
+            attachedInputs.contains(OP1_DEVICE_NAME) -> {
+                cc = Op1.valueOf(number)
+                relValue = if (value > 1) -1 else 1
+            }
+            attachedInputs.contains(BEATSTEP_DEVICE_NAME) -> {
+                cc = BS.valueOf(number)
+                relValue = if (value > 65) -1 else 1
+            }
+            else -> return
+        }
+
+        if (!cc.isKnob && value > 0) {
             return
         }
 
-        val cc = Op1.valueOf(number)
-        val relValue = if (value > 1) -1 else value
-
-        if (!cc.isKnob && value > 1) {
-            return
-        }
-
-        op1ControllerChangeAbs(cc, channel, if (cc.isKnob) value else relValue)
-        op1ControllerChangeRel(cc, channel, relValue)
+        controllerChangeAbs(cc, channel, if (cc.isKnob) value else relValue)
+        controllerChangeRel(cc, channel, relValue)
 
         if (redrawOnEvent) {
             redraw()
-        }
-        if (printControllerChanges) {
-            println("${cc.name}: ch: $channel v: $value rel: $relValue")
         }
     }
 
