@@ -159,15 +159,16 @@ open class ProcessingAppK : ProcessingApp() {
     }
 
 
-    open fun controllerChangeAbs(cc: MidiDevice, channel: Int, value: Int) {}
-    open fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int) {
+    open fun controllerChangeAbs(cc: MidiDevice, channel: Int, value: Int): Boolean = false
+    open fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int): Boolean {
         when (cc) {
             Op1.REC, BS.PAD_16 -> exportNextFrameSvg = true
             Op1.STOP, BS.STOP -> exit()
             Op1.MIC, BS.PAD_8 -> reset()
             Op1.PLAY, BS.PAD_7 -> toggleLoop()
-            else -> return
+            else -> return false
         }
+        return true
     }
 
     open fun noteOn(channel: Int, pitch: Int, velocity: Int) {}

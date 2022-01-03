@@ -111,7 +111,7 @@ class Moire : ProcessingAppK() {
 
     }
 
-    override fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int) {
+    override fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int): Boolean {
         val p = shapeParams[current]
         when (cc to channel) {
             BLUE_KNOB to 0 ->
@@ -143,10 +143,11 @@ class Moire : ProcessingAppK() {
                     HELP ->
                         colorCurrent = !colorCurrent
                     else ->
-                        super.controllerChangeRel(cc, channel, value)
+                        return super.controllerChangeRel(cc, channel, value)
                 }
         }
         println(p)
+        return true
     }
 
 
