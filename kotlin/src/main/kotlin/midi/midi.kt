@@ -4,9 +4,13 @@ import io.github.pflouret.sketchbook.p5.ProcessingApp
 import themidibus.MidiBus
 import javax.sound.midi.MidiMessage
 
+interface MidiDevice {
+    val isKnob: Boolean
+}
+
 // https://teenage.engineering/guides/op-1/layout
 // https://api.pcloud.com/getpubthumb?code=XZ7zNDXZVEUpS86wBJXVCHvFCdIXpXViDvA7&size=1336x1865
-enum class Op1(val number: Int, val isKnob: Boolean = false) {
+enum class Op1(val number: Int, override val isKnob: Boolean = false): MidiDevice {
     BLUE(64),
     GREEN(65),
     WHITE(66),
@@ -44,25 +48,68 @@ enum class Op1(val number: Int, val isKnob: Boolean = false) {
     STOP(40),
     REW(41),
     FF(42),
-    UNDEFINED(9999);
-
+    UNDEFINED(999);
 
     companion object {
-        private val NUMBER_TO_KEY = Op1.values().map { it.number to it }.toMap()
+        private val NUMBER_TO_KEY = values().associateBy(Op1::number)
         fun valueOf(number: Int) : Op1 = NUMBER_TO_KEY[number] ?: UNDEFINED
     }
-
 }
 
-class Op1Echo : ProcessingApp() {
+enum class BS(val number: Int, override val isKnob: Boolean = false): MidiDevice {
+    LEVEL(50, true),
+    STOP(51, true),
+    KNOB_1(1, true),
+    KNOB_2(2, true),
+    KNOB_3(3, true),
+    KNOB_4(4, true),
+    KNOB_5(5, true),
+    KNOB_6(6, true),
+    KNOB_7(7, true),
+    KNOB_8(8, true),
+    KNOB_9(9, true),
+    KNOB_10(10, true),
+    KNOB_11(11, true),
+    KNOB_12(12, true),
+    KNOB_13(13, true),
+    KNOB_14(14, true),
+    KNOB_15(15, true),
+    KNOB_16(16, true),
+    PAD_1(1),
+    PAD_2(2),
+    PAD_3(3),
+    PAD_4(4),
+    PAD_5(5),
+    PAD_6(6),
+    PAD_7(7),
+    PAD_8(8),
+    PAD_9(9),
+    PAD_10(10),
+    PAD_11(11),
+    PAD_12(12),
+    PAD_13(13),
+    PAD_14(14),
+    PAD_15(15),
+    PAD_16(16),
+    UNDEFINED(999);
+
+    companion object {
+        private val NUMBER_TO_KEY = values().associateBy(BS::number)
+        fun valueOf(number: Int) : BS = NUMBER_TO_KEY[number] ?: UNDEFINED
+    }
+}
+
+
+class MidiEcho : ProcessingApp() {
     companion object {
         fun run() {
-            val sketch = Op1Echo()
+            val sketch = MidiEcho()
             sketch.runSketch()
         }
     }
 
-    val midi = MidiBus(this, "OP-1 Midi Device", "")
+//    val midi = MidiBus(this, "OP-1 Midi Device", "")
+    val midi = MidiBus(this, "Arturia BeatStep", "")
 
     override fun settings() {
         size(100, 100, P2D)
@@ -114,5 +161,5 @@ class Op1Echo : ProcessingApp() {
 }
 
 fun main() {
-    Op1Echo.run();
+    MidiEcho.run();
 }
