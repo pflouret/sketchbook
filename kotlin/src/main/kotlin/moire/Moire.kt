@@ -2,6 +2,7 @@ package moire
 
 import com.sun.glass.ui.Size
 import javafx.scene.paint.Color
+import midi.MidiDevice
 import midi.Op1
 import midi.Op1.*
 import p5.ProcessingAppK
@@ -110,7 +111,7 @@ class Moire : ProcessingAppK() {
 
     }
 
-    override fun op1ControllerChangeRel(cc: Op1, channel: Int, value: Int) {
+    override fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int) {
         val p = shapeParams[current]
         when (cc to channel) {
             BLUE_KNOB to 0 ->
@@ -142,7 +143,7 @@ class Moire : ProcessingAppK() {
                     HELP ->
                         colorCurrent = !colorCurrent
                     else ->
-                        super.op1ControllerChangeRel(cc, channel, value)
+                        super.controllerChangeRel(cc, channel, value)
                 }
         }
         println(p)
@@ -153,11 +154,11 @@ class Moire : ProcessingAppK() {
         when (e.key) {
             in KEY_TO_KNOB -> {
                 val mapping = KEY_TO_KNOB[e.key]!!
-                op1ControllerChangeRel(mapping.knob, mapping.channel, mapping.value)
+                controllerChangeRel(mapping.knob, mapping.channel, mapping.value)
             }
-            in KEY_TO_BUTTON -> op1ControllerChangeRel(KEY_TO_BUTTON[e.key]!!, 0, 1)
-            'a', 'z' -> op1ControllerChangeRel(BLUE_KNOB, 0, if (e.key == 'a') 1 else -1)
-            'A', 'Z' -> op1ControllerChangeRel(BLUE_KNOB, 1, if (e.key == 'A') 1 else -1)
+            in KEY_TO_BUTTON -> controllerChangeRel(KEY_TO_BUTTON[e.key]!!, 0, 1)
+            'a', 'z' -> controllerChangeRel(BLUE_KNOB, 0, if (e.key == 'a') 1 else -1)
+            'A', 'Z' -> controllerChangeRel(BLUE_KNOB, 1, if (e.key == 'A') 1 else -1)
             else -> return
         }
         redraw()
