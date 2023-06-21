@@ -14,7 +14,7 @@ class Agents : ProcessingAppK() {
         var octaves: Float = 3f,
         var falloff: Float = 0.5f,
         var speed: Int = 1,
-        var maxAgents: Int = 2000,
+        var maxAgents: Int = 20,
         var offset: PVector = PVector(0f, 0f)
 
 //        var coordOffset: PVector,
@@ -25,11 +25,11 @@ class Agents : ProcessingAppK() {
 //        var scale: Int = 500,
     )
 
-    inner class Agent : ArrayList<PVector>() {
+    inner class Agent(initial: PVector? = null) : ArrayList<PVector>() {
         var done = false
 
         init {
-            add(randomVector())
+            add(initial ?: randomVector())
         }
 
         fun draw() = withShape {
@@ -41,15 +41,19 @@ class Agents : ProcessingAppK() {
                 return
             }
 
-            val noiseVal =
-                noise(last().x / width + params.offset.x, last().y / height + params.offset.y)
-            val angle = map(noiseVal, 0f, 1f, -2 * PI, 0f)
-            add(last().copy().add(PVector.fromAngle(angle.absoluteValue)))
+            moveCanonical()
+
             if (!inViewport(last())) {
                 done = true
             }
         }
 
+        private fun moveCanonical() {
+            val noiseVal =
+                noise(last().x / width + params.offset.x, last().y / height + params.offset.y)
+            val angle = map(noiseVal, 0f, 1f, -2 * PI, 0f)
+            add(last().copy().add(PVector.fromAngle(angle.absoluteValue)))
+        }
     }
 
     private var agents = mutableListOf<Agent>()
@@ -87,7 +91,7 @@ class Agents : ProcessingAppK() {
                 it.move()
             }
             if (agents.size < params.maxAgents) {
-                repeat(agents.count { it.done }) { agents.add(Agent()) }
+                repeat(agents.count { it.done }) { agents.add(buildAgent()) }
             }
         }
     }
@@ -107,7 +111,11 @@ class Agents : ProcessingAppK() {
         return true
     }
 
-    private fun buildAgents() = MutableList(20) { Agent() }
+    private fun buildAgents() = MutableList(20) { buildAgent() }
+    private fun buildAgent(): Agent {
+//        return Agent()
+        return Agent(PVector(0f, width/4f))
+    }
 
     override fun reset() = reset(newSeed = true)
     private fun reset(newSeed: Boolean = true) {

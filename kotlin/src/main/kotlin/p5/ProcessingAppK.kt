@@ -33,7 +33,7 @@ enum class PaperSize(val size: Size) {
     fun landscape() = Size(size.height, size.width)
 }
 
-fun PVector.within(width: Int, height: Int) = x > 0 && x < width && y > 0 && y < height
+fun PVector.within(width: Int, height: Int) = x >= 0 && x <= width && y >= 0 && y <= height
 
 open class ProcessingAppK : ProcessingApp() {
     var printControllerChanges = true
