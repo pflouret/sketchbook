@@ -1,6 +1,8 @@
 plugins {
-    id "org.jetbrains.kotlin.plugin.serialization" version "1.5.0"
-    id 'org.jetbrains.kotlin.jvm' version '1.5.0'
+    id "org.jetbrains.kotlin.plugin.serialization" version "1.8.0"
+    id 'org.jetbrains.kotlin.jvm' version '1.8.0'
+    id 'org.openjfx.javafxplugin' version "0.0.14"
+    id 'java-library'
 }
 
 group 'io.github.pflouret'
@@ -9,29 +11,35 @@ version '1.0-SNAPSHOT'
 apply plugin: 'java'
 apply plugin: 'kotlin'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 17
+tasks.withType(JavaCompile) {
+    options.release = 17
+}
 
 repositories {
     mavenCentral()
+    maven { url "https://jogamp.org/deployment/maven" }
 //    maven { url "https://clojars.org/repo" }
 //    maven { url "https://jitpack.io" }
 }
 
 dependencies {
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.12.2'
-    compile 'com.google.guava:guava:30.1.1-jre'
-    compile 'org.jogamp.gluegen:gluegen-rt-main:2.3.2'
-    compile 'org.jogamp.jogl:jogl:2.3.2'
-    compile 'org.jogamp.jogl:jogl-all-main:2.3.2'
-    compile 'org.jogamp.jogl:newt-main:2.3.2'
-    compile 'org.jogamp.jogl:nativewindow-main:2.3.2'
-    compile 'org.apache.commons:commons-math3:3.6.1'
-    compile 'org.apache.xmlgraphics:batik-awt-util:1.8'
-    compile 'org.apache.xmlgraphics:batik-dom:1.8'
-    compile 'org.apache.xmlgraphics:batik-ext:1.8'
-    compile 'org.apache.xmlgraphics:batik-svggen:1.8'
-    compile 'org.apache.xmlgraphics:batik-util:1.8'
-    compile 'org.apache.xmlgraphics:batik-xml:1.8'
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.15.1')
+    implementation('com.google.guava:guava:31.1-jre')
+    implementation('org.jogamp.gluegen:gluegen-rt-main:2.4.0')
+    implementation('org.jogamp.jogl:jogl-all-main:2.4.0')
+    implementation('org.jogamp.jogl:jogl-all-main:2.4.0')
+    implementation("org.jogamp.jogl:newt-main:2.4.0")
+    implementation('org.jogamp.jogl:nativewindow-main:2.4.0')
+    implementation('org.apache.commons:commons-math3:3.6.1')
+    implementation('org.apache.xmlgraphics:batik-awt-util:1.14')
+    implementation('org.apache.xmlgraphics:batik-dom:1.14')
+    implementation('org.apache.xmlgraphics:batik-ext:1.14')
+    implementation('org.apache.xmlgraphics:batik-svggen:1.14')
+    implementation('org.apache.xmlgraphics:batik-util:1.14')
+    implementation('org.apache.xmlgraphics:batik-xml:1.14')
+//    runtimeOnly "org.jogamp.gluegen:gluegen-rt:2.3.1:natives-macosx-universal"
+//    runtimeOnly "org.jogamp.jogl:jogl-all:2.3.1:natives-macosx-universal"
 
 //    compile 'controlp5:controlp5:2.2.4-SNAPSHOT'
 //    compile 'org.processing:core:3.3.7'
@@ -39,21 +47,25 @@ dependencies {
 //    compile 'quil:processing-core:4.0.0-alpha-2'
 //    compile 'org.jogamp.jogl:jogl:2.3.2'
 
-    compileOnly 'org.projectlombok:lombok:1.18.20'
-    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+    implementation 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
 
-    compile fileTree(dir: "lib", include: "**/*.jar")
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.5.0"
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.1.0'
+    implementation fileTree(dir: "lib", include: "**/*.jar")
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
+}
+
+javafx {
+    modules("javafx.controls", "javafx.fxml", "javafx.graphics")
 }
 
 compileKotlin {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 compileTestKotlin {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
