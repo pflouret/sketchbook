@@ -4,10 +4,7 @@ import com.hamoid.VideoExport
 import com.sun.glass.ui.Size
 import io.github.pflouret.sketchbook.p5.ProcessingApp
 import javafx.scene.paint.Color
-import midi.BS
-import midi.MM1
-import midi.MidiDevice
-import midi.Op1
+import midi.MidiController
 import processing.core.PVector
 import processing.event.KeyEvent
 import themidibus.MidiBus
@@ -46,9 +43,6 @@ open class ProcessingAppK : ProcessingApp() {
     var video: VideoExport? = null
 
     companion object {
-        const val OP1_DEVICE_NAME = "OP-1 Midi Device"
-        const val BEATSTEP_DEVICE_NAME = "Arturia BeatStep"
-        const val MM1_DEVICE_NAME = "Mixer One"
     }
 
     open fun drawInternal() {}
@@ -148,70 +142,34 @@ open class ProcessingAppK : ProcessingApp() {
         endShape()
     }
 
-    fun setupMM1(): MidiBus = MidiBus(this, MM1_DEVICE_NAME, "").let {
-        midi = it
-        it
-    }
-
-    fun setupOp1(): MidiBus {
-        val midibus = MidiBus(this, OP1_DEVICE_NAME, "")
-        midi = midibus
-        return midibus
-    }
-
-    fun setupBeatStep(): MidiBus {
-        val midibus = MidiBus(this, BEATSTEP_DEVICE_NAME, "")
-        midi = midibus
-        return midibus
-    }
-
-
-    open fun controllerChangeAbs(cc: MidiDevice, channel: Int, value: Int) {}
-    open fun controllerChangeRel(cc: MidiDevice, channel: Int, value: Int) {
-        when (cc) {
-            MM1.SHIFT_PAD_1, Op1.PLAY, BS.PAD_7 -> toggleLoop()
-            MM1.SHIFT_PAD_2, Op1.MIC, BS.PAD_8 -> reset()
-            MM1.SHIFT_PAD_3, Op1.REC, BS.PAD_16 -> exportNextFrameSvg = true
-            MM1.SHIFT_PAD_12, Op1.STOP, BS.STOP -> exit()
-            else -> return
-        }
-    }
-
-    open fun noteOn(channel: Int, pitch: Int, velocity: Int) {}
-    open fun noteOff(channel: Int, pitch: Int, velocity: Int) {}
+    fun initMidi(controller: MidiController): MidiBus =
+        MidiBus(this, controller.usbName, "").let { midi = it; it }
 
     open fun controllerChange(channel: Int, number: Int, value: Int) {
-        val attachedInputs = midi?.attachedInputs() ?: return
-        val cc: MidiDevice
-        val relValue: Int
-
-        when {
-            attachedInputs.contains(OP1_DEVICE_NAME) -> {
-                cc = Op1.valueOf(number)
-                relValue = if (value > 1) -1 else 1
-            }
-            attachedInputs.contains(BEATSTEP_DEVICE_NAME) -> {
-                cc = BS.valueOf(number)
-                relValue = if (value > 65) -1 else 1
-            }
-            attachedInputs.contains(MM1_DEVICE_NAME) -> {
-                cc = MM1.valueOf(number)
-                relValue = if (value > 65) -1 else 1
-            }
-            else -> return
-        }
-
-        if (!cc.isKnob && value > 0) {
-            return
-        }
-
-        controllerChangeAbs(cc, channel, if (cc.isKnob) value else relValue)
-        controllerChangeRel(cc, channel, relValue)
-
+        controllerChangeAbs(channel, number, value)
+        controllerChangeRel(channel, number, if (value > 64) 1 else -1)
         if (redrawOnEvent) {
             redraw()
         }
     }
+
+    open fun controllerChangeAbs(channel: Int, cc: Int, value: Int) {
+        // midi fighter twister, channel 1(0-indexed) for cc switch 0 = off, 127 = on
+        if (channel != 1 || value != 0) {
+            return
+        }
+        when (cc) {
+            12 -> toggleLoop()
+            13 -> reset()
+            14 -> exportNextFrameSvg = true
+            15 -> exit()
+            else -> return
+        }
+    }
+    open fun controllerChangeRel(channel: Int, cc: Int, value: Int) {}
+
+    open fun noteOn(channel: Int, pitch: Int, velocity: Int) {}
+    open fun noteOff(channel: Int, pitch: Int, velocity: Int) {}
 
     fun createVideoExporter(): VideoExport {
         return VideoExport(this, makeSketchFilename("%s.mp4")).also {
