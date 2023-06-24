@@ -1,13 +1,9 @@
 package io.github.pflouret.sketchbook.p5;
 
-import controlP5.ControlP5;
 import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -24,8 +20,6 @@ public class ProcessingApp extends PApplet {
   protected boolean redrawOnEvent = true;
   protected boolean saveVideo = false;
 
-  protected ControlP5 cp;
-
   public ProcessingApp() {
     super();
     app = this;
@@ -33,7 +27,7 @@ public class ProcessingApp extends PApplet {
 
 
   public void pre() {
-    processControlEvents();
+//    processControlEvents();
   }
 
   public void pr(Object... args) {
@@ -56,20 +50,6 @@ public class ProcessingApp extends PApplet {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss_S")));
 
     return folder.toPath().resolve(filename).toAbsolutePath().toString();
-  }
-
-  public void buildGui() {
-    cp = new ControlP5(this);
-  }
-
-  public void toggleGuiVisibility() {
-    if (cp != null) {
-      if (cp.isVisible()) {
-        cp.hide();
-      } else {
-        cp.show();
-      }
-    }
   }
 
   public void noiseline(PGraphics pg, PVector v0, PVector v1, float resolution, float probability) {
@@ -198,39 +178,5 @@ public class ProcessingApp extends PApplet {
       curveVertex(p.x - b - off, p.y - b - off / 2f);
     }
     endShape();
-  }
-
-  protected ConcurrentLinkedQueue<BaseControlFrame.ControlFrameEvent> controlEventQueue =
-      new ConcurrentLinkedQueue<>();
-
-  public void postControlEvent(BaseControlFrame.ControlFrameEvent e) {
-    controlEventQueue.add(e);
-    redraw();
-  }
-
-  protected void processControlEvents() {
-    BaseControlFrame.ControlFrameEvent e;
-    boolean processed = false;
-    while ((e = controlEventQueue.poll()) != null) {
-      try {
-        Field field = getClass().getDeclaredField(e.name);
-        field.setAccessible(true);
-        field.set(this, e.value);
-        processed = true;
-        continue;
-      } catch (NoSuchFieldException ex) {
-      } catch (Exception ex) {
-        throw new RuntimeException(ex);
-      }
-
-      try {
-        Method method = getClass().getDeclaredMethod(e.name);
-        method.invoke(this);
-        processed = true;
-      } catch (NoSuchMethodException ex) {
-      } catch (Exception ex) {
-        throw new RuntimeException(ex);
-      }
-    }
   }
 }

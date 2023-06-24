@@ -24,13 +24,10 @@ repositories {
 }
 
 dependencies {
-    implementation('com.fasterxml.jackson.core:jackson-databind:2.15.1')
-    implementation('com.google.guava:guava:31.1-jre')
-    implementation('org.jogamp.gluegen:gluegen-rt-main:2.4.0')
-    implementation('org.jogamp.jogl:jogl-all-main:2.4.0')
-    implementation('org.jogamp.jogl:jogl-all-main:2.4.0')
     implementation("org.jogamp.jogl:newt-main:2.4.0")
-    implementation('org.jogamp.jogl:nativewindow-main:2.4.0')
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.15.1')
+    implementation('com.google.code.gson:gson:2.8.9')
+    implementation('com.google.guava:guava:31.1-jre')
     implementation('org.apache.commons:commons-math3:3.6.1')
     implementation('org.apache.xmlgraphics:batik-awt-util:1.14')
     implementation('org.apache.xmlgraphics:batik-dom:1.14')
@@ -38,14 +35,10 @@ dependencies {
     implementation('org.apache.xmlgraphics:batik-svggen:1.14')
     implementation('org.apache.xmlgraphics:batik-util:1.14')
     implementation('org.apache.xmlgraphics:batik-xml:1.14')
-//    runtimeOnly "org.jogamp.gluegen:gluegen-rt:2.3.1:natives-macosx-universal"
-//    runtimeOnly "org.jogamp.jogl:jogl-all:2.3.1:natives-macosx-universal"
-
-//    compile 'controlp5:controlp5:2.2.4-SNAPSHOT'
-//    compile 'org.processing:core:3.3.7'
-//    compile 'com.github.micycle1:processing-core-4:4.0.3'
-//    compile 'quil:processing-core:4.0.0-alpha-2'
-//    compile 'org.jogamp.jogl:jogl:2.3.2'
+    implementation('org.jogamp.gluegen:gluegen-rt-main:2.4.0')
+    implementation('org.jogamp.jogl:jogl-all-main:2.4.0')
+    implementation('org.jogamp.jogl:jogl-all-main:2.4.0')
+    implementation('org.jogamp.jogl:nativewindow-main:2.4.0')
 
     implementation 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'

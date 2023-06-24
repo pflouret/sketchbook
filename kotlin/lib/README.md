@@ -20,3 +20,6 @@
 
 #### The MidiBus
 http://www.smallbutdigital.com/projects/themidibus/
+
+#### LazyGui
+https://github.com/KrabCode/LazyGui

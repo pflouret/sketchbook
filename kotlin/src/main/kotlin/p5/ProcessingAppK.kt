@@ -62,7 +62,7 @@ open class ProcessingAppK : ProcessingApp() {
         registerMethod("pre", this)
 
         surface.setResizable(true)
-        surface.setTitle(javaClass.simpleName.toLowerCase())
+        surface.setTitle(javaClass.simpleName.lowercase())
         w2 = width / 2f
         h2 = height / 2f
 
@@ -94,7 +94,6 @@ open class ProcessingAppK : ProcessingApp() {
             'R' -> exportNextFrameSvg = true
             'S' -> screenshot()
             'c' -> clear()
-            'h' -> toggleGuiVisibility()
             'p' -> toggleLoop()
             'r' -> reset()
             'V' -> {
