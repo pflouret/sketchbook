@@ -95,7 +95,7 @@ open class ProcessingAppK : ProcessingApp() {
             'S' -> screenshot()
             'c' -> clear()
             'p' -> toggleLoop()
-            'r' -> reset()
+            'x' -> reset()
             'V' -> {
                 video?.endMovie()
                 video = null
@@ -126,6 +126,8 @@ open class ProcessingAppK : ProcessingApp() {
     }
 
     open fun random() = random(1f)
+    open fun random(high: Int) = random(high.toFloat())
+    open fun random(low: Int, high: Int) = random(low.toFloat(), high.toFloat())
     open fun randomVector() = PVector(random(width.toFloat()), random(height.toFloat()))
     open fun toggleLoop() = if (isLooping) noLoop() else loop()
     open fun point(v: PVector) = point(v.x, v.y)
@@ -133,6 +135,7 @@ open class ProcessingAppK : ProcessingApp() {
     open fun curveVertex(v: PVector) = curveVertex(v.x, v.y)
     open fun noise(v: PVector) = noise(v.x, v.y, v.z)
     open fun screenshot() = saveFrame(makeSketchFilename("%s_####.png"))
+    open fun translate(v: PVector) = translate(v.x, v.y)
     fun inViewport(v: PVector) = v.within(width, height)
 
     fun withShape(block: () -> Unit) {
