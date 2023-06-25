@@ -2,7 +2,7 @@ package moire
 
 import com.krab.lazy.LazyGui
 import com.krab.lazy.LazyGuiSettings
-import com.krab.lazy.stores.JsonSaveStore
+import com.krab.lazy.stores.LayoutStore
 import midi.MidiController
 import p5.ProcessingAppK
 import processing.core.PVector
@@ -21,20 +21,25 @@ class Moire : ProcessingAppK() {
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
+        smooth(4)
     }
 
     override fun setup() {
         super.setup()
+        LayoutStore.setFolderRowClickClosesWindowIfOpen(true)
+        LayoutStore.setResizeRectangleSize(11f)
         gui = LazyGui(
             this,
-            LazyGuiSettings().setAutosaveLockGuardEnabled(false).setLoadLatestSaveOnStartup(false)
+            LazyGuiSettings()
+                .setMainFontSize(10)
+                .setSideFontSize(10)
+                .setAutosaveLockGuardEnabled(false)
+                .setLoadLatestSaveOnStartup(false)
         )
         initMidi(MidiController.FIGHTER)
         initGui()
 
-        initialGuiState = JsonSaveStore.getTreeAsJsonString()
-
-        noiseDetail(5, 0.3f)
+        noiseDetail(4, 0.2f)
         if (!evolve) {
             noLoop()
         }
@@ -123,8 +128,8 @@ class Moire : ProcessingAppK() {
 
     override fun reset() {
         gui.sliderIntSet("shapeCount", 0)
-        clearFolderChildren("s")
-        clearNodeTreeCache()
+        gui.clearFolderChildren("s")
+        gui.clearNodeTreeCache()
         redraw()
     }
 

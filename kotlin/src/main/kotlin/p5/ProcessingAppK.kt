@@ -55,7 +55,6 @@ open class ProcessingAppK : ProcessingApp() {
     override fun setup() {
         super.setup()
 
-        clear()
         noFill()
         hint(ENABLE_STROKE_PURE)
         resetSeed(true)

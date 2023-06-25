@@ -49,7 +49,16 @@ dependencies {
 }
 
 javafx {
-    modules("javafx.controls", "javafx.fxml", "javafx.graphics")
+    version = "17"
+    modules(
+            "javafx.base",
+            "javafx.controls",
+            "javafx.fxml",
+            "javafx.graphics",
+            "javafx.media",
+            "javafx.swing",
+            "javafx.web"
+    )
 }
 
 compileKotlin {
