@@ -17,7 +17,6 @@ class Moire : ProcessingAppK() {
     private var evolve = true
 
     private lateinit var gui: LazyGui
-    private lateinit var initialGuiState: String
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -32,22 +31,20 @@ class Moire : ProcessingAppK() {
         initMidi(MidiController.FIGHTER)
         initGui()
 
-        initialGuiState = JsonSaveStore.getTreeAsJsonString()
-
         noiseDetail(5, 0.3f)
         if (!evolve) {
             noLoop()
         }
 
-        if (gui.sliderInt("shapeCount") == 0) {
+        if (gui.sliderInt("internal/shapeCount") == 0) {
             addShape()
         }
     }
 
     private fun initGui() {
         gui.button("add shape")
-        gui.sliderInt("shapeCount", 0)
-        gui.hide("shapeCount")
+        gui.sliderInt("internal/shapeCount", 0)
+        gui.hide("internal")
     }
 
 //    private fun buildSpiral(): List<PVector> {
@@ -84,23 +81,24 @@ class Moire : ProcessingAppK() {
     }
 
     private fun addShape() {
-        val i = gui.sliderInt("shapeCount")
+        val i = gui.sliderInt("internal/shapeCount")
 
         gui.slider("s/$i/radius step", ANGLE_STEP / 2)
         gui.slider("s/$i/revolutions", 100f)
         gui.plotXY("s/$i/center", w2, h2)
         gui.plotXY("s/$i/coordinate offset", random(3), random(3))
-        gui.plotXY("s/$i/noise offset", random(3), random(3))
+        gui.plotXY("s/$i/noise offset", random(10), random(10))
         gui.slider("s/$i/noise vector scale", random(0.002f, 0.008f))
         gui.slider("s/$i/noise scale", 0.5f)
-        gui.sliderInt("s/$i/noise seed", random(1000000f).toInt())
+        gui.sliderInt("s/$i/internal/noise seed", random(1000000f).toInt())
         gui.colorPicker("s/$i/color", 0f)
 
-        gui.hide("shapeCount")
-        gui.hide("s/$i/noise seed")
-        gui.sliderIntSet("shapeCount", i + 1)
+        gui.sliderIntSet("internal/shapeCount", i + 1)
+
+        gui.hide("s/$i/internal")
     }
 
+    val centerNoiseOffset = PVector(random(100), random(100))
     private fun updateShapeParams() {
         if (!evolve) {
             return
@@ -108,13 +106,19 @@ class Moire : ProcessingAppK() {
 
 //        gui.sliderAdd("radius step", random(-0.001f, 0.001f))
 //        gui.sliderAdd("revolutions", random(-0.001f, 0.001f))
-//        gui.plotAdd("center", random(-0.0002f, 0.0002f), random(-0.0002f, 0.0002f))
+//        centerNoiseOffset.add(0.0001f, 0.0001f).let {
+//            gui.plotSet(
+//                "center",
+//                mapRandom(noise(it.x), 0f, width.toFloat()),
+//                mapRandom(noise(it.y), 0f, height.toFloat())
+//            )
+//        }
 //        gui.plotAdd(
 //            "coordinate offset",
 //            random(-0.00001f, 0.00001f),
 //            random(-0.00001f, 0.00001f)
 //        )
-        gui.plotAdd("noise offset", randomVector(0.0004f, 0.0004f))
+        gui.plotAdd("noise offset", 0.0005f, 0.0005f)
 //        gui.sliderAdd("noise vector scale", random(-0.00002f, 0.00002f))
 //        gui.sliderAdd("noise scale", random(-0.0001f, 0.0001f))
     }
@@ -122,7 +126,7 @@ class Moire : ProcessingAppK() {
     private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
 
     override fun reset() {
-        gui.sliderIntSet("shapeCount", 0)
+        gui.sliderIntSet("internal/shapeCount", 0)
         clearFolderChildren("s")
         clearNodeTreeCache()
         redraw()
@@ -139,7 +143,7 @@ class Moire : ProcessingAppK() {
             addShape()
         }
 
-        for (i in 0 until gui.sliderInt("shapeCount")) {
+        for (i in 0 until gui.sliderInt("internal/shapeCount")) {
             gui.pushFolder("s/$i")
             push()
             stroke(gui.colorPicker("color").hex)

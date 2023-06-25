@@ -130,6 +130,7 @@ open class ProcessingAppK : ProcessingApp() {
     open fun random(low: Int, high: Int) = random(low.toFloat(), high.toFloat())
     open fun randomVector() = randomVector(width.toFloat(), height.toFloat())
     open fun randomVector(highX: Float, highY: Float) = PVector(random(highX), random(highY))
+    open fun mapRandom(v: Float, start2: Float, end2: Float) = map(v, 0f, 1f, start2, end2)
     open fun toggleLoop() = if (isLooping) noLoop() else loop()
     open fun point(v: PVector) = point(v.x, v.y)
     open fun vertex(v: PVector) = vertex(v.x, v.y)
