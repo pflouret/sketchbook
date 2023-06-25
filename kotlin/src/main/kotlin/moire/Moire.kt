@@ -10,10 +10,11 @@ import processing.event.MouseEvent
 import util.Size
 import util.clearFolderChildren
 import util.clearNodeTreeCache
+import util.plotAdd
 import kotlin.math.roundToInt
 
 class Moire : ProcessingAppK() {
-    private var colorCurrent = true
+    private var evolve = true
 
     private lateinit var gui: LazyGui
     private lateinit var initialGuiState: String
@@ -34,7 +35,9 @@ class Moire : ProcessingAppK() {
         initialGuiState = JsonSaveStore.getTreeAsJsonString()
 
         noiseDetail(5, 0.3f)
-        noLoop()
+        if (!evolve) {
+            noLoop()
+        }
 
         if (gui.sliderInt("shapeCount") == 0) {
             addShape()
@@ -63,7 +66,7 @@ class Moire : ProcessingAppK() {
 
         var a = 0f
         var r = 0f
-        val totalSteps = (gui.sliderInt("revolutions") * 2 * PI / ANGLE_STEP).roundToInt()
+        val totalSteps = (gui.slider("revolutions") * 2 * PI / ANGLE_STEP).roundToInt()
         for (i in 0..totalSteps) {
             val noisePosition = spiralCoord(a, r)
                 .mult(gui.slider("noise vector scale"))
@@ -84,11 +87,11 @@ class Moire : ProcessingAppK() {
         val i = gui.sliderInt("shapeCount")
 
         gui.slider("s/$i/radius step", ANGLE_STEP / 2)
-        gui.sliderInt("s/$i/revolutions", 50)
+        gui.slider("s/$i/revolutions", 100f)
         gui.plotXY("s/$i/center", w2, h2)
         gui.plotXY("s/$i/coordinate offset", random(3), random(3))
         gui.plotXY("s/$i/noise offset", random(3), random(3))
-        gui.slider("s/$i/noise vector scale", random(0.002f, 0.008f), 0f, 0.01f)
+        gui.slider("s/$i/noise vector scale", random(0.002f, 0.008f))
         gui.slider("s/$i/noise scale", 0.5f)
         gui.sliderInt("s/$i/noise seed", random(1000000f).toInt())
         gui.colorPicker("s/$i/color", 0f)
@@ -96,6 +99,24 @@ class Moire : ProcessingAppK() {
         gui.hide("shapeCount")
         gui.hide("s/$i/noise seed")
         gui.sliderIntSet("shapeCount", i + 1)
+    }
+
+    private fun updateShapeParams() {
+        if (!evolve) {
+            return
+        }
+
+//        gui.sliderAdd("radius step", random(-0.001f, 0.001f))
+//        gui.sliderAdd("revolutions", random(-0.001f, 0.001f))
+//        gui.plotAdd("center", random(-0.0002f, 0.0002f), random(-0.0002f, 0.0002f))
+//        gui.plotAdd(
+//            "coordinate offset",
+//            random(-0.00001f, 0.00001f),
+//            random(-0.00001f, 0.00001f)
+//        )
+        gui.plotAdd("noise offset", randomVector(0.0004f, 0.0004f))
+//        gui.sliderAdd("noise vector scale", random(-0.00002f, 0.00002f))
+//        gui.sliderAdd("noise scale", random(-0.0001f, 0.0001f))
     }
 
     private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
@@ -127,6 +148,7 @@ class Moire : ProcessingAppK() {
             buildPerlinSpiral().map(this::curveVertex)
             endShape()
             pop()
+            updateShapeParams()
             gui.popFolder()
         }
 
