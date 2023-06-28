@@ -1,4 +1,4 @@
-package util
+package gui
 
 import com.krab.lazy.LazyGui
 import com.krab.lazy.nodes.FolderNode

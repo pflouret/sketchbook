@@ -1,28 +1,23 @@
 package etc
 
-import com.krab.lazy.LazyGui
+import com.krab.lazy.PickerColor
+import gui.LazyGuiControlDelegate
 import p5.ProcessingAppK
-
 
 class GuiTest : ProcessingAppK() {
     companion object {
         fun run() = GuiTest().runSketch()
     }
 
-    private lateinit var gui: LazyGui
+    private var theCamelCase: PickerColor by LazyGuiControlDelegate("colorPicker", "", 1)
 
     override fun settings() {
+        super.settings()
         size(500, 500, P2D)
     }
 
-    override fun setup() {
-        super.setup()
-        background(255)
-        gui = LazyGui(this)
-    }
-
     override fun drawInternal() {
-        background(gui.colorPicker("background").hex);
+        background(theCamelCase.hex);
     }
 }
 

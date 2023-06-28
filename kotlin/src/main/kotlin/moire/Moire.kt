@@ -8,16 +8,13 @@ import p5.ProcessingAppK
 import processing.core.PVector
 import processing.event.MouseEvent
 import util.Size
-import util.clearFolderChildren
-import util.clearNodeTreeCache
-import util.plotAdd
+import gui.clearFolderChildren
+import gui.clearNodeTreeCache
+import gui.plotAdd
 import kotlin.math.roundToInt
 
 class Moire : ProcessingAppK() {
     private var evolve = true
-
-    private lateinit var gui: LazyGui
-    private lateinit var initialGuiState: String
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -28,14 +25,6 @@ class Moire : ProcessingAppK() {
         super.setup()
         LayoutStore.setFolderRowClickClosesWindowIfOpen(true)
         LayoutStore.setResizeRectangleSize(11f)
-        gui = LazyGui(
-            this,
-            LazyGuiSettings()
-                .setMainFontSize(10)
-                .setSideFontSize(10)
-                .setAutosaveLockGuardEnabled(false)
-                .setLoadLatestSaveOnStartup(false)
-        )
         initMidi(MidiController.FIGHTER)
         initGui()
 
@@ -49,11 +38,11 @@ class Moire : ProcessingAppK() {
         }
     }
 
-    private fun initGui() {
-        gui.button("add shape")
-        gui.sliderInt("shapeCount", 0)
-        gui.hide("shapeCount")
-    }
+//    private fun initGui() {
+//        gui.button("add shape")
+//        gui.sliderInt("shapeCount", 0)
+//        gui.hide("shapeCount")
+//    }
 
 //    private fun buildSpiral(): List<PVector> {
 //        val angles = generateSequence(0f) { it + ANGLE_STEP }

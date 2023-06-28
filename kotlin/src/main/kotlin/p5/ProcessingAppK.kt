@@ -1,6 +1,8 @@
 package p5
 
 import com.hamoid.VideoExport
+import com.krab.lazy.LazyGui
+import com.krab.lazy.LazyGuiSettings
 import com.sun.glass.ui.Size
 import io.github.pflouret.sketchbook.p5.ProcessingApp
 import javafx.scene.paint.Color
@@ -34,13 +36,14 @@ enum class PaperSize(val size: Size) {
 fun PVector.within(width: Int, height: Int) = x > 0 && x < width && y > 0 && y < height
 
 open class ProcessingAppK : ProcessingApp() {
-    var printControllerChanges = true
+    var loadLatestSaveOnStartup = false
     var exportNextFrameSvg = false
     var w2 = 0f
     var h2 = 0f
 
     var midi: MidiBus? = null
     var video: VideoExport? = null
+    lateinit var gui: LazyGui
 
     companion object {
     }
@@ -68,6 +71,17 @@ open class ProcessingAppK : ProcessingApp() {
         if (saveVideo) {
             video = createVideoExporter().also { it.startMovie() }
         }
+    }
+
+    open fun initGui() {
+        gui = LazyGui(
+            this,
+            LazyGuiSettings()
+                .setMainFontSize(10)
+                .setSideFontSize(10)
+                .setAutosaveLockGuardEnabled(false)
+                .setLoadLatestSaveOnStartup(loadLatestSaveOnStartup)
+        )
     }
 
     override fun draw() {
