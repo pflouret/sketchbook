@@ -16,7 +16,7 @@ class SmokeTest : ProcessingAppK() {
         loop()
     }
 
-    override fun drawInternal() {
+    override fun draw() {
         background(h, 0.9f, 0.9f, 1f);
         h = (h+0.001f) % 1f
     }

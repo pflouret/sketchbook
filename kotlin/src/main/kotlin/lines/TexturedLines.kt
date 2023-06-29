@@ -56,7 +56,7 @@ class TexturedLines : ProcessingAppK() {
 
     }
 
-    override fun drawInternal() {
+    override fun draw() {
         noFill()
         translate(w2, h2)
         circles()

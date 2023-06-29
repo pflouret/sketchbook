@@ -5,6 +5,11 @@ import gui.LazyGuiControlDelegate
 import p5.ProcessingAppK
 
 class GuiTest : ProcessingAppK() {
+
+    init {
+        loadLatestSaveOnStartup = true
+    }
+
     companion object {
         fun run() = GuiTest().runSketch()
     }
@@ -16,7 +21,12 @@ class GuiTest : ProcessingAppK() {
         size(500, 500, P2D)
     }
 
-    override fun drawInternal() {
+    override fun setup() {
+        super.setup()
+        initGui()
+    }
+
+    override fun draw() {
         background(theCamelCase.hex);
     }
 }

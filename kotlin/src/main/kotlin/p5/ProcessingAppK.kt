@@ -8,10 +8,12 @@ import com.sun.glass.ui.Size
 import io.github.pflouret.sketchbook.p5.ProcessingApp
 import javafx.scene.paint.Color
 import midi.MidiController
+import processing.core.PApplet
 import processing.core.PVector
 import processing.event.KeyEvent
 import processing.event.MouseEvent
 import themidibus.MidiBus
+import java.util.Random
 import kotlin.math.roundToInt
 
 enum class PaperSize(val size: Size) {
@@ -50,7 +52,6 @@ open class ProcessingAppK : ProcessingApp() {
     companion object {
     }
 
-    open fun drawInternal() {}
     open fun reset() {}
 
     override fun settings() {
@@ -64,6 +65,7 @@ open class ProcessingAppK : ProcessingApp() {
         hint(ENABLE_STROKE_PURE)
         resetSeed(true)
         registerMethod("pre", this)
+        registerMethod("post", this)
 
         surface.setResizable(true)
         surface.setTitle(javaClass.simpleName.lowercase())
@@ -88,7 +90,11 @@ open class ProcessingAppK : ProcessingApp() {
         LayoutStore.setResizeRectangleSize(11f)
     }
 
-    override fun draw() {
+    fun pre() {
+        if (::gui.isInitialized) {
+            gui.hide("internal")
+        }
+
         if (exportNextFrameSvg) {
             makeSketchFilename("%s_####.svg").also {
                 beginRecord(SVG, it)
@@ -96,17 +102,15 @@ open class ProcessingAppK : ProcessingApp() {
             }
         }
 
-        drawInternal()
+    }
 
+    fun post() {
         if (exportNextFrameSvg) {
             endRecord()
             exportNextFrameSvg = false
         }
 
         video?.saveFrame()
-        if (::gui.isInitialized) {
-            gui.hide("internal")
-        }
     }
 
     open fun resetSeed() = resetSeed(false)
@@ -125,17 +129,21 @@ open class ProcessingAppK : ProcessingApp() {
                 (color.blue * 255).roundToInt()
     }
 
+    open fun pr(vararg args: Any?) = println(args.mapNotNull { it }.joinToString(" "))
+    open fun toggleLoop() = if (isLooping) noLoop() else loop()
+    open fun screenshot() = saveFrame(makeSketchFilename("%s_####.png"))
+
     open fun random() = random(1f)
     open fun random(high: Int) = random(high.toFloat())
     open fun random(low: Int, high: Int) = random(low.toFloat(), high.toFloat())
     open fun randomVector() = randomVector(width.toFloat(), height.toFloat())
     open fun randomVector(highX: Float, highY: Float) = PVector(random(highX), random(highY))
-    open fun toggleLoop() = if (isLooping) noLoop() else loop()
+    open fun prob(probability: Float) = random(1) < probability
+
     open fun point(v: PVector) = point(v.x, v.y)
     open fun vertex(v: PVector) = vertex(v.x, v.y)
     open fun curveVertex(v: PVector) = curveVertex(v.x, v.y)
     open fun noise(v: PVector) = noise(v.x, v.y, v.z)
-    open fun screenshot() = saveFrame(makeSketchFilename("%s_####.png"))
     open fun translate(v: PVector) = translate(v.x, v.y)
     fun inViewport(v: PVector) = v.within(width, height)
 
@@ -207,4 +215,9 @@ open class ProcessingAppK : ProcessingApp() {
 
     open fun noteOn(channel: Int, pitch: Int, velocity: Int) {}
     open fun noteOff(channel: Int, pitch: Int, velocity: Int) {}
+}
+
+fun PApplet.getRandom() = this.javaClass.getDeclaredField("internalRandom").let {
+    it.trySetAccessible()
+    it.get(this) as Random
 }

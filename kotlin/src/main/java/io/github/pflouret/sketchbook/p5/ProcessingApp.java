@@ -25,15 +25,6 @@ public class ProcessingApp extends PApplet {
     app = this;
   }
 
-
-  public void pre() {
-//    processControlEvents();
-  }
-
-  public void pr(Object... args) {
-    println(String.join(" ", Stream.of(args).map(Object::toString).collect(Collectors.toList())));
-  }
-
   public boolean prob(double probability) {
     return random(1) < probability;
   }

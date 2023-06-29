@@ -2,8 +2,6 @@ package gui
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerDotCaseStrategy
 import com.krab.lazy.LazyGui
-import com.krab.lazy.nodes.ButtonNode
-import com.krab.lazy.stores.NodeTree
 import p5.ProcessingAppK
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KCallable

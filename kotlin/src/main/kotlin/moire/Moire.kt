@@ -6,6 +6,7 @@ import gui.clearNodeTreeCache
 import gui.plotAdd
 import midi.MidiController
 import p5.ProcessingAppK
+import processing.core.PApplet
 import processing.core.PVector
 import processing.event.MouseEvent
 import util.Size
@@ -46,7 +47,7 @@ class Moire : ProcessingAppK() {
         redraw()
     }
 
-    override fun drawInternal() {
+    override fun draw() {
         if (!exportNextFrameSvg) {
             background(255)
         }
@@ -84,7 +85,7 @@ class Moire : ProcessingAppK() {
         gui.sliderInt("shapes/$i/noise seed", random(1000000f).toInt())
         gui.colorPicker("shapes/$i/color", 0f)
 
-        gui.hide("s/$i/noise seed")
+        gui.hide("shapes/$i/noise seed")
         shapeCount += 1
     }
 
@@ -190,15 +191,13 @@ class Moire : ProcessingAppK() {
     }
 
     companion object {
-        val SIZE = Size(700, 700)
-
-        //  val SIZE = PaperSize.ORIGAMI_150.size
         const val ANGLE_STEP = 0.3f
 
-        fun run() = Moire().runSketch()
+        val SIZE = Size(700, 700)
+        //  val SIZE = PaperSize.ORIGAMI_150.size
     }
 }
 
 fun main() {
-    Moire.run()
+    PApplet.runSketch(arrayOf("moire.Moire"), null)
 }
