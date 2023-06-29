@@ -2,7 +2,7 @@ package gui
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerDotCaseStrategy
 import com.krab.lazy.LazyGui
-import p5.ProcessingAppK
+import com.krab.lazy.stores.GlobalReferences
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KCallable
 import kotlin.reflect.KProperty
@@ -12,8 +12,9 @@ class LazyGuiControlDelegate<T>(
     private val controlType: String,
     folder: String = "",
     private val defaultValue: Any? = null,
-) : ReadWriteProperty<ProcessingAppK, T> {
+) : ReadWriteProperty<Any, T> {
     companion object {
+        private val gui by lazy { GlobalReferences.gui }
         private val KOT_TO_JVM_SIMPLE_NAME = mapOf(
             "Float" to "float",
             "Integer" to "int",
@@ -27,41 +28,42 @@ class LazyGuiControlDelegate<T>(
     private lateinit var setter: KCallable<*>
 
     @Suppress("UNCHECKED_CAST")
-    override operator fun getValue(thisRef: ProcessingAppK, property: KProperty<*>): T {
+    override operator fun getValue(thisRef: Any, property: KProperty<*>): T {
         if (!::getter.isInitialized) {
-            initialize(thisRef, property.name)
+            initialize(property.name)
         }
-        return getter.call(thisRef.gui, controlPath(thisRef)) as T
+        return getter.call(gui, controlPath()) as T
     }
 
-    override operator fun setValue(thisRef: ProcessingAppK, property: KProperty<*>, value: T) {
+    override operator fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
         if (!::setter.isInitialized) {
-            initialize(thisRef, property.name)
+            initialize(property.name)
         }
-        setter.call(thisRef.gui, controlPath(thisRef), value)
+        setter.call(gui, controlPath(), value)
     }
 
-    private fun effectiveFolder(thisRef: ProcessingAppK) = folder.replace(thisRef.gui.folder, "")
-    private fun controlPath(thisRef: ProcessingAppK) =
-        "${effectiveFolder(thisRef)}$controlName"
+    private fun effectiveFolder() = folder.replace(gui.folder, "")
+    private fun controlPath() = "${effectiveFolder()}$controlName"
 
-    private fun initialize(thisRef: ProcessingAppK, propertyName: String) {
+    private fun initialize(propertyName: String) {
         controlName = LowerDotCaseStrategy().translate(propertyName).replace(".", " ")
 
         if (defaultValue != null) {
             LazyGui::class.members
                 .find(this::matchingDefaultValueMethod)!!
-                .call(thisRef.gui, controlPath(thisRef), defaultValue)
+                .call(gui, controlPath(), defaultValue)
         }
 
-        getter = thisRef.gui::class.members
+        getter = gui::class.members
             .find { it.name == controlType && it.parameters.size == 2 }!!
 
-        val setterName = "${controlType}Set"
-        setter = if (controlType == "button") {
-            thisRef.gui::buttonSet
-        } else {
-            thisRef.gui::class.members.find { it.name == setterName && it.parameters.size == 3 }!!
+        val setterName = when (controlType) {
+            "plotXY" -> "plotSet"
+            else -> "${controlType}Set"
+        }
+        setter = when (controlType) {
+            "button" -> gui::buttonSet
+            else -> gui::class.members.find { it.name == setterName && it.parameters.size == 3 }!!
         }
     }
 

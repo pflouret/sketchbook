@@ -1,9 +1,9 @@
 package moire
 
+import com.krab.lazy.PickerColor
 import gui.LazyGuiControlDelegate
 import gui.clearFolderChildren
 import gui.clearNodeTreeCache
-import gui.plotAdd
 import midi.MidiController
 import p5.ProcessingAppK
 import processing.core.PApplet
@@ -16,7 +16,7 @@ class Moire : ProcessingAppK() {
     private var animate = false
 
     private var addShape: Boolean by LazyGuiControlDelegate("button")
-    private var shapeCount: Int by LazyGuiControlDelegate("sliderInt", "internal")
+    private val shapes = mutableListOf<Shape>()
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -35,13 +35,14 @@ class Moire : ProcessingAppK() {
             noLoop()
         }
 
-        if (shapeCount == 0) {
+        // FIXME: load from saved state
+        if (shapes.isEmpty()) {
             addShape()
         }
     }
 
     override fun reset() {
-        shapeCount = 0
+        shapes.clear()
         gui.clearFolderChildren("shapes")
         gui.clearNodeTreeCache()
         redraw()
@@ -58,89 +59,12 @@ class Moire : ProcessingAppK() {
             addShape()
         }
 
-        for (i in 0 until shapeCount) {
-            gui.pushFolder("shapes/$i")
-            push()
-            stroke(gui.colorPicker("color").hex)
-            beginShape()
-            translate(gui.plotXY("center"))
-            buildPerlinSpiral().map(this::curveVertex)
-            endShape()
-            pop()
-            updateShapeParams()
-            gui.popFolder()
-        }
+        shapes.forEach(Shape::draw)
     }
 
     private fun addShape() {
-        val i = shapeCount
-
-        gui.slider("shapes/$i/radius step", ANGLE_STEP / 2)
-        gui.slider("shapes/$i/revolutions", 100f)
-        gui.plotXY("shapes/$i/center", w2, h2)
-        gui.plotXY("shapes/$i/coordinate offset", random(3), random(3))
-        gui.plotXY("shapes/$i/noise offset", random(3), random(3))
-        gui.slider("shapes/$i/noise vector scale", random(0.002f, 0.008f))
-        gui.slider("shapes/$i/noise scale", 0.5f)
-        gui.sliderInt("shapes/$i/noise seed", random(1000000f).toInt())
-        gui.colorPicker("shapes/$i/color", 0f)
-
-        gui.hide("shapes/$i/noise seed")
-        shapeCount += 1
+        shapes.add(Shape(shapes.size))
     }
-
-//    private fun buildSpiral(): List<PVector> {
-//        val angles = generateSequence(0f) { it + ANGLE_STEP }
-//        val radii = generateSequence(0f) { it + p.radiusStep }
-//
-//        return (angles zip radii)
-//            .take((p.revolutions * 2 * Math.PI / ANGLE_STEP).roundToInt())
-//            .map { PVector(it.second * cos(it.first), it.second * sin(it.first)) }
-//            .toList()
-//    }
-
-    private fun buildPerlinSpiral(): List<PVector> {
-        val spiral = mutableListOf<PVector>()
-        noiseSeed(gui.sliderInt("noise seed").toLong())
-
-        var a = 0f
-        var r = 0f
-        val totalSteps = (gui.slider("revolutions") * 2 * PI / ANGLE_STEP).roundToInt()
-        for (i in 0..totalSteps) {
-            val noisePosition = spiralCoord(a, r)
-                .mult(gui.slider("noise vector scale"))
-                .add(gui.plotXY("noise offset"))
-            val noisyRadius = r - r * (noise(noisePosition) * gui.slider("noise scale"))
-            val spiralCoordOffset = gui.plotXY("coordinate offset")
-                .copy()
-                .mult(i.toFloat() / totalSteps)
-            spiral.add(spiralCoord(a, noisyRadius).add(spiralCoordOffset))
-            a += ANGLE_STEP
-            r += gui.slider("radius step")
-        }
-
-        return spiral
-    }
-
-    private fun updateShapeParams() {
-        if (!animate) {
-            return
-        }
-
-//        gui.sliderAdd("radius step", random(-0.001f, 0.001f))
-//        gui.sliderAdd("revolutions", random(-0.001f, 0.001f))
-//        gui.plotAdd("center", random(-0.0002f, 0.0002f), random(-0.0002f, 0.0002f))
-//        gui.plotAdd(
-//            "coordinate offset",
-//            random(-0.00001f, 0.00001f),
-//            random(-0.00001f, 0.00001f)
-//        )
-        gui.plotAdd("noise offset", randomVector(0.0004f, 0.0004f))
-//        gui.sliderAdd("noise vector scale", random(-0.00002f, 0.00002f))
-//        gui.sliderAdd("noise scale", random(-0.0001f, 0.0001f))
-    }
-
-    private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
 
     override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
 //        if (channel != 0) {
@@ -188,6 +112,80 @@ class Moire : ProcessingAppK() {
 //            shapeParams[current].center = PVector(mouseX.toFloat(), mouseY.toFloat())
 //        }
 //        redraw()
+    }
+
+    inner class Shape(index: Int) {
+        private val folder = "shapes/$index"
+        private val internalFolder = "shapes/$index/internal"
+        private var radiusStep: Float by LazyGuiControlDelegate("slider", folder, ANGLE_STEP / 2)
+        private var revolutions: Float by LazyGuiControlDelegate("slider", folder, 100f)
+        private var center: PVector by LazyGuiControlDelegate("plotXY", folder, PVector(w2, h2))
+        private var coordinateOffset: PVector by LazyGuiControlDelegate(
+            "plotXY",
+            folder,
+            PVector(random(3), random(3))
+        )
+        private var noiseOffset: PVector by LazyGuiControlDelegate(
+            "plotXY",
+            folder,
+            PVector(random(3), random(3))
+        )
+        private var noiseVectorScale: Float by LazyGuiControlDelegate(
+            "slider",
+            folder,
+            random(0.002f, 0.005f)
+        )
+        private var noiseScale: Float by LazyGuiControlDelegate("slider", folder, 0.5f)
+        private var noiseSeed: Int by LazyGuiControlDelegate(
+            "sliderInt",
+            internalFolder,
+            random(1000000).toInt()
+        )
+        private var color: PickerColor by LazyGuiControlDelegate("colorPicker", folder, 0f)
+
+        fun draw() {
+            withPush {
+                stroke(color.hex)
+                withShape {
+                    translate(center)
+                    buildPerlinSpiral().map(::curveVertex)
+                }
+            }
+
+            update()
+        }
+
+        private fun update() {
+            if (!animate) {
+                return
+            }
+            noiseOffset = noiseOffset.add(randomVector(0.0004f, 0.0004f))
+        }
+
+        private fun buildPerlinSpiral(): List<PVector> {
+            val spiral = mutableListOf<PVector>()
+            noiseSeed(noiseSeed.toLong())
+
+            var a = 0f
+            var r = 0f
+            val totalSteps = (revolutions * 2 * PI / ANGLE_STEP).roundToInt()
+            for (i in 0..totalSteps) {
+                val noisePosition = spiralCoord(a, r)
+                    .mult(noiseVectorScale)
+                    .add(noiseOffset)
+                val noisyRadius = r - r * (noise(noisePosition) * noiseScale)
+                val spiralCoordOffset = coordinateOffset
+                    .copy()
+                    .mult(i.toFloat() / totalSteps)
+                spiral.add(spiralCoord(a, noisyRadius).add(spiralCoordOffset))
+                a += ANGLE_STEP
+                r += radiusStep
+            }
+
+            return spiral
+        }
+
+        private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
     }
 
     companion object {

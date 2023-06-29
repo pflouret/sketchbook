@@ -3,7 +3,9 @@ package p5
 import com.hamoid.VideoExport
 import com.krab.lazy.LazyGui
 import com.krab.lazy.LazyGuiSettings
+import com.krab.lazy.nodes.FolderNode
 import com.krab.lazy.stores.LayoutStore
+import com.krab.lazy.stores.NodeTree
 import com.sun.glass.ui.Size
 import io.github.pflouret.sketchbook.p5.ProcessingApp
 import javafx.scene.paint.Color
@@ -92,7 +94,7 @@ open class ProcessingAppK : ProcessingApp() {
 
     fun pre() {
         if (::gui.isInitialized) {
-            gui.hide("internal")
+            hideGuiInternalFolders()
         }
 
         if (exportNextFrameSvg) {
@@ -102,6 +104,12 @@ open class ProcessingAppK : ProcessingApp() {
             }
         }
 
+    }
+
+    private fun hideGuiInternalFolders() {
+        NodeTree.getAllNodesAsList()
+            .filter { it is FolderNode && it.path.replace("/?$", "/").contains("internal") }
+            .forEach { gui.hide(it.path) }
     }
 
     fun post() {
@@ -151,6 +159,12 @@ open class ProcessingAppK : ProcessingApp() {
         beginShape()
         block()
         endShape()
+    }
+
+    fun withPush(block: () -> Unit) {
+        push()
+        block()
+        pop()
     }
 
     fun createVideoExporter(): VideoExport {
