@@ -7,6 +7,7 @@ import gui.clearNodeTreeCache
 import midi.MidiController
 import p5.ProcessingAppK
 import processing.core.PApplet
+import processing.core.PConstants
 import processing.core.PVector
 import processing.event.MouseEvent
 import util.Size
@@ -17,6 +18,7 @@ class Moire : ProcessingAppK() {
 
     private var addShape: Boolean by LazyGuiControlDelegate("button")
     private val shapes = mutableListOf<Shape>()
+    private var current = 0
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -67,51 +69,29 @@ class Moire : ProcessingAppK() {
     }
 
     override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
-//        if (channel != 0) {
-//            return
-//        }
-//
-//        val p = shapeParams[current]
-//        when (cc) {
-//            0 -> p.radiusStep += value * 0.0005f
-//            1 -> p.revolutions += value
-//            2 -> p.noiseVectorScale += value * 0.0001f
-//            3 -> p.noiseScale += value * 0.01f
-//            4 -> p.coordOffset.x += value * 0.5f
-//            5 -> p.coordOffset.y += value * 0.5f
-//            6 -> p.noiseOffset.x += value * 0.05f
-//            7 -> p.noiseOffset.y += value * 0.05f
-//            8 -> p.center.add(value.toFloat(), 0f)
-//            9 -> p.center.add(0f, value.toFloat())
-//            else ->
-//                super.controllerChangeRel(channel, cc, value)
-//        }
-//        println(p)
+        if (channel == 0) {
+            shapes[current].controllerChangeRel(channel, cc, value)
+        }
     }
 
     override fun controllerChangeAbs(channel: Int, cc: Int, value: Int) {
-//        if (channel != 1 || value != 0) {
-//            return
-//        }
-//
-//        val p = shapeParams[current]
-//        when (cc) {
-//            0 -> addShape()
-//            1 -> current = (current + 1) % shapeParams.size
+        if (channel != 1 || value != 0) {
+            return
+        }
+
+        when (cc) {
+            0 -> addShape()
+            1 -> current = (current + 1) % shapes.size
 //            2 -> colorCurrent = !colorCurrent
-//            else ->
-//                super.controllerChangeAbs(channel, cc, value)
-//        }
-//
-//        println(p)
+            else ->
+                super.controllerChangeAbs(channel, cc, value)
+        }
     }
 
     override fun mouseClicked(e: MouseEvent) {
-//        super.mouseClicked(e)
-//        if (e.button == PConstants.LEFT) {
-//            shapeParams[current].center = PVector(mouseX.toFloat(), mouseY.toFloat())
-//        }
-//        redraw()
+        super.mouseClicked(e)
+        shapes[current].mouseClicked(e)
+        redraw()
     }
 
     inner class Shape(index: Int) {
@@ -156,7 +136,7 @@ class Moire : ProcessingAppK() {
         }
 
         private fun update() {
-            if (!animate) {
+            if (!looping) {
                 return
             }
             noiseOffset = noiseOffset.add(randomVector(0.0004f, 0.0004f))
@@ -186,6 +166,27 @@ class Moire : ProcessingAppK() {
         }
 
         private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
+
+        fun mouseClicked(e: MouseEvent) {
+            if (e.button == PConstants.LEFT) {
+                center = PVector(mouseX.toFloat(), mouseY.toFloat())
+            }
+        }
+
+        fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
+            when (cc) {
+                0 -> radiusStep += value * 0.0005f
+                1 -> revolutions += value
+                2 -> noiseVectorScale += value * 0.0001f
+                3 -> noiseScale += value * 0.01f
+                4 -> coordinateOffset = coordinateOffset.add(value * 0.5f, 0f)
+                5 -> coordinateOffset = coordinateOffset.add(0f, value * 0.5f)
+                6 -> noiseOffset = noiseOffset.add(PVector(value * 0.05f, 0f))
+                7 -> noiseOffset = noiseOffset.add(PVector(0f, value * 0.05f))
+                8 -> center = center.add(value.toFloat(), 0f)
+                9 -> center = center.add(0f, value.toFloat())
+            }
+        }
     }
 
     companion object {

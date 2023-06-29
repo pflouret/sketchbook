@@ -8,6 +8,7 @@ import kotlin.reflect.KCallable
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaType
 
+@Suppress("UNCHECKED_CAST")
 class LazyGuiControlDelegate<T>(
     private val controlType: String,
     folder: String = "",
@@ -27,21 +28,25 @@ class LazyGuiControlDelegate<T>(
     private lateinit var getter: KCallable<*>
     private lateinit var setter: KCallable<*>
 
-    @Suppress("UNCHECKED_CAST")
     override operator fun getValue(thisRef: Any, property: KProperty<*>): T {
-        if (!::getter.isInitialized) {
+        if (!isInitialized()) {
             initialize(property.name)
         }
-        return getter.call(gui, controlPath()) as T
+        synchronized(gui) {
+            return getter.call(gui, controlPath()) as T
+        }
     }
 
     override operator fun setValue(thisRef: Any, property: KProperty<*>, value: T) {
-        if (!::setter.isInitialized) {
+        if (!isInitialized()) {
             initialize(property.name)
         }
-        setter.call(gui, controlPath(), value)
+        synchronized(gui) {
+            setter.call(gui, controlPath(), value)
+        }
     }
 
+    private fun isInitialized() = ::getter.isInitialized
     private fun effectiveFolder() = folder.replace(gui.folder, "")
     private fun controlPath() = "${effectiveFolder()}$controlName"
 
