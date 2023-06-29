@@ -2,6 +2,8 @@ package gui
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerDotCaseStrategy
 import com.krab.lazy.LazyGui
+import com.krab.lazy.nodes.ButtonNode
+import com.krab.lazy.stores.NodeTree
 import p5.ProcessingAppK
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KCallable
@@ -21,7 +23,7 @@ class LazyGuiControlDelegate<T>(
             "Boolean" to "boolean",
         )
     }
-    private val folder = folder.replace("/?$", "/")
+    private val folder = folder.replace("/?$".toRegex(), "/")
     private lateinit var controlName: String
     private lateinit var getter: KCallable<*>
     private lateinit var setter: KCallable<*>
@@ -31,14 +33,14 @@ class LazyGuiControlDelegate<T>(
         if (!::getter.isInitialized) {
             initialize(thisRef, property.name)
         }
-        return getter.call(thisRef.gui, controlName) as T
+        return getter.call(thisRef.gui, controlPath(thisRef)) as T
     }
 
     override operator fun setValue(thisRef: ProcessingAppK, property: KProperty<*>, value: T) {
         if (!::setter.isInitialized) {
             initialize(thisRef, property.name)
         }
-        setter.call(thisRef.gui, controlName, value)
+        setter.call(thisRef.gui, controlPath(thisRef), value)
     }
 
     private fun effectiveFolder(thisRef: ProcessingAppK) = folder.replace(thisRef.gui.folder, "")
@@ -54,11 +56,15 @@ class LazyGuiControlDelegate<T>(
                 .call(thisRef.gui, controlPath(thisRef), defaultValue)
         }
 
-        val setterName = "${controlType}Set"
         getter = thisRef.gui::class.members
             .find { it.name == controlType && it.parameters.size == 2 }!!
-        setter = thisRef.gui::class.members
-            .find { it.name == setterName && it.parameters.size == 3 }!!
+
+        val setterName = "${controlType}Set"
+        setter = if (controlType == "button") {
+            thisRef.gui::buttonSet
+        } else {
+            thisRef.gui::class.members.find { it.name == setterName && it.parameters.size == 3 }!!
+        }
     }
 
     private fun matchingDefaultValueMethod(method: KCallable<*>): Boolean =

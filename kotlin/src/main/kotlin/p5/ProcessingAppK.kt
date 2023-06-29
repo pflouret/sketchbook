@@ -3,12 +3,14 @@ package p5
 import com.hamoid.VideoExport
 import com.krab.lazy.LazyGui
 import com.krab.lazy.LazyGuiSettings
+import com.krab.lazy.stores.LayoutStore
 import com.sun.glass.ui.Size
 import io.github.pflouret.sketchbook.p5.ProcessingApp
 import javafx.scene.paint.Color
 import midi.MidiController
 import processing.core.PVector
 import processing.event.KeyEvent
+import processing.event.MouseEvent
 import themidibus.MidiBus
 import kotlin.math.roundToInt
 
@@ -82,6 +84,8 @@ open class ProcessingAppK : ProcessingApp() {
                 .setAutosaveLockGuardEnabled(false)
                 .setLoadLatestSaveOnStartup(loadLatestSaveOnStartup)
         )
+        LayoutStore.setFolderRowClickClosesWindowIfOpen(true)
+        LayoutStore.setResizeRectangleSize(11f)
     }
 
     override fun draw() {
@@ -100,25 +104,8 @@ open class ProcessingAppK : ProcessingApp() {
         }
 
         video?.saveFrame()
-    }
-
-    override fun keyTyped(e: KeyEvent) {
-        when (e.key) {
-            'R' -> exportNextFrameSvg = true
-            'S' -> screenshot()
-            'c' -> clear()
-            'p' -> toggleLoop()
-            'x' -> reset()
-            'V' -> {
-                video?.endMovie()
-                video = null
-            }
-            else -> {
-            }
-        }
-
-        if (redrawOnEvent || exportNextFrameSvg) {
-            redraw()
+        if (::gui.isInitialized) {
+            gui.hide("internal")
         }
     }
 
@@ -158,6 +145,40 @@ open class ProcessingAppK : ProcessingApp() {
         endShape()
     }
 
+    fun createVideoExporter(): VideoExport {
+        return VideoExport(this, makeSketchFilename("%s.mp4")).also {
+            it.setFrameRate(60f)
+            it.setDebugging(false)
+        }
+    }
+
+    override fun keyTyped(e: KeyEvent) {
+        when (e.key) {
+            'R' -> exportNextFrameSvg = true
+            'S' -> screenshot()
+            'c' -> clear()
+            'p' -> toggleLoop()
+            'x' -> reset()
+            'V' -> {
+                video?.endMovie()
+                video = null
+            }
+            else -> {
+            }
+        }
+
+        if (redrawOnEvent || exportNextFrameSvg) {
+            redraw()
+        }
+    }
+
+    override fun handleMouseEvent(event: MouseEvent?) {
+        super.handleMouseEvent(event)
+        if (::gui.isInitialized) {
+            redraw()
+        }
+    }
+
     fun initMidi(controller: MidiController): MidiBus =
         MidiBus(this, controller.usbName, "").let { midi = it; it }
 
@@ -186,12 +207,4 @@ open class ProcessingAppK : ProcessingApp() {
 
     open fun noteOn(channel: Int, pitch: Int, velocity: Int) {}
     open fun noteOff(channel: Int, pitch: Int, velocity: Int) {}
-
-    fun createVideoExporter(): VideoExport {
-        return VideoExport(this, makeSketchFilename("%s.mp4")).also {
-            it.setFrameRate(60f)
-            it.setDebugging(false)
-        }
-    }
-
 }

@@ -1,7 +1,9 @@
 package gui
 
 import com.krab.lazy.LazyGui
+import com.krab.lazy.nodes.ButtonNode
 import com.krab.lazy.nodes.FolderNode
+import com.krab.lazy.nodes.setValueBoolean
 import com.krab.lazy.stores.NodeTree
 import processing.core.PVector
 
@@ -13,7 +15,23 @@ fun LazyGui.clearNodeTreeCache() {
 }
 
 fun LazyGui.clearFolderChildren(path: String) {
-    (NodeTree.findNode("s") as? FolderNode)?.children?.clear()
+    (NodeTree.findNode(path) as? FolderNode)?.children?.clear()
+}
+
+fun LazyGui.buttonSet(path: String, value: Boolean) {
+    val fullPath: String = folder + path;
+    if (NodeTree.isPathTakenByUnexpectedType(fullPath, ButtonNode::class.java)) {
+        return
+    }
+    val node =
+        (NodeTree.findNode(fullPath) as? ButtonNode) ?: NodeTree.findParentFolderLazyInitPath(path)
+            .let {
+                ButtonNode(path, it).also { node ->
+                    NodeTree.insertNodeAtItsPath(node);
+                }
+            }
+
+    node.setValueBoolean(value);
 }
 
 fun LazyGui.plotAdd(path: String, v: PVector) = plotSet(path, plotXY(path).add(v))

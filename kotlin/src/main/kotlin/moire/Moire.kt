@@ -1,20 +1,21 @@
 package moire
 
-import com.krab.lazy.LazyGui
-import com.krab.lazy.LazyGuiSettings
-import com.krab.lazy.stores.LayoutStore
+import gui.LazyGuiControlDelegate
+import gui.clearFolderChildren
+import gui.clearNodeTreeCache
+import gui.plotAdd
 import midi.MidiController
 import p5.ProcessingAppK
 import processing.core.PVector
 import processing.event.MouseEvent
 import util.Size
-import gui.clearFolderChildren
-import gui.clearNodeTreeCache
-import gui.plotAdd
 import kotlin.math.roundToInt
 
 class Moire : ProcessingAppK() {
-    private var evolve = true
+    private var animate = false
+
+    private var addShape: Boolean by LazyGuiControlDelegate("button")
+    private var shapeCount: Int by LazyGuiControlDelegate("sliderInt", "internal")
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -23,26 +24,69 @@ class Moire : ProcessingAppK() {
 
     override fun setup() {
         super.setup()
-        LayoutStore.setFolderRowClickClosesWindowIfOpen(true)
-        LayoutStore.setResizeRectangleSize(11f)
+
         initMidi(MidiController.FIGHTER)
         initGui()
 
         noiseDetail(4, 0.2f)
-        if (!evolve) {
+
+        if (!animate) {
             noLoop()
         }
 
-        if (gui.sliderInt("shapeCount") == 0) {
+        if (shapeCount == 0) {
             addShape()
         }
     }
 
-//    private fun initGui() {
-//        gui.button("add shape")
-//        gui.sliderInt("shapeCount", 0)
-//        gui.hide("shapeCount")
-//    }
+    override fun reset() {
+        shapeCount = 0
+        gui.clearFolderChildren("shapes")
+        gui.clearNodeTreeCache()
+        redraw()
+    }
+
+    override fun drawInternal() {
+        if (!exportNextFrameSvg) {
+            background(255)
+        }
+        noFill()
+        stroke(0)
+
+        if (addShape) {
+            addShape()
+        }
+
+        for (i in 0 until shapeCount) {
+            gui.pushFolder("shapes/$i")
+            push()
+            stroke(gui.colorPicker("color").hex)
+            beginShape()
+            translate(gui.plotXY("center"))
+            buildPerlinSpiral().map(this::curveVertex)
+            endShape()
+            pop()
+            updateShapeParams()
+            gui.popFolder()
+        }
+    }
+
+    private fun addShape() {
+        val i = shapeCount
+
+        gui.slider("shapes/$i/radius step", ANGLE_STEP / 2)
+        gui.slider("shapes/$i/revolutions", 100f)
+        gui.plotXY("shapes/$i/center", w2, h2)
+        gui.plotXY("shapes/$i/coordinate offset", random(3), random(3))
+        gui.plotXY("shapes/$i/noise offset", random(3), random(3))
+        gui.slider("shapes/$i/noise vector scale", random(0.002f, 0.008f))
+        gui.slider("shapes/$i/noise scale", 0.5f)
+        gui.sliderInt("shapes/$i/noise seed", random(1000000f).toInt())
+        gui.colorPicker("shapes/$i/color", 0f)
+
+        gui.hide("s/$i/noise seed")
+        shapeCount += 1
+    }
 
 //    private fun buildSpiral(): List<PVector> {
 //        val angles = generateSequence(0f) { it + ANGLE_STEP }
@@ -77,26 +121,8 @@ class Moire : ProcessingAppK() {
         return spiral
     }
 
-    private fun addShape() {
-        val i = gui.sliderInt("shapeCount")
-
-        gui.slider("s/$i/radius step", ANGLE_STEP / 2)
-        gui.slider("s/$i/revolutions", 100f)
-        gui.plotXY("s/$i/center", w2, h2)
-        gui.plotXY("s/$i/coordinate offset", random(3), random(3))
-        gui.plotXY("s/$i/noise offset", random(3), random(3))
-        gui.slider("s/$i/noise vector scale", random(0.002f, 0.008f))
-        gui.slider("s/$i/noise scale", 0.5f)
-        gui.sliderInt("s/$i/noise seed", random(1000000f).toInt())
-        gui.colorPicker("s/$i/color", 0f)
-
-        gui.hide("shapeCount")
-        gui.hide("s/$i/noise seed")
-        gui.sliderIntSet("shapeCount", i + 1)
-    }
-
     private fun updateShapeParams() {
-        if (!evolve) {
+        if (!animate) {
             return
         }
 
@@ -114,39 +140,6 @@ class Moire : ProcessingAppK() {
     }
 
     private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
-
-    override fun reset() {
-        gui.sliderIntSet("shapeCount", 0)
-        gui.clearFolderChildren("s")
-        gui.clearNodeTreeCache()
-        redraw()
-    }
-
-    override fun drawInternal() {
-        if (!exportNextFrameSvg) {
-            background(255)
-        }
-        noFill()
-        stroke(0)
-
-        if (gui.button("add shape")) {
-            addShape()
-        }
-
-        for (i in 0 until gui.sliderInt("shapeCount")) {
-            gui.pushFolder("s/$i")
-            push()
-            stroke(gui.colorPicker("color").hex)
-            beginShape()
-            translate(gui.plotXY("center"))
-            buildPerlinSpiral().map(this::curveVertex)
-            endShape()
-            pop()
-            updateShapeParams()
-            gui.popFolder()
-        }
-
-    }
 
     override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
 //        if (channel != 0) {
@@ -194,11 +187,6 @@ class Moire : ProcessingAppK() {
 //            shapeParams[current].center = PVector(mouseX.toFloat(), mouseY.toFloat())
 //        }
 //        redraw()
-    }
-
-    override fun handleMouseEvent(event: MouseEvent?) {
-        super.handleMouseEvent(event)
-        redraw()
     }
 
     companion object {
