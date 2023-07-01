@@ -23,6 +23,7 @@ class LazyGuiControlDelegate<T>(
             "Boolean" to "boolean",
         )
     }
+
     private val folder = folder.replace("/?$".toRegex(), "/")
     private lateinit var controlName: String
     private lateinit var getter: KCallable<*>
@@ -68,6 +69,7 @@ class LazyGuiControlDelegate<T>(
         }
         setter = when (controlType) {
             "button" -> gui::buttonSet
+            "plotXY" -> gui::plotSetVector
             else -> gui::class.members.find { it.name == setterName && it.parameters.size == 3 }!!
         }
     }

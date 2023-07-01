@@ -14,7 +14,7 @@ import util.Size
 import kotlin.math.roundToInt
 
 class Moire : ProcessingAppK() {
-    private var animate = false
+    private var animate = true
 
     private var addShape: Boolean by LazyGuiControlDelegate("button")
     private val shapes = mutableListOf<Shape>()
@@ -89,9 +89,11 @@ class Moire : ProcessingAppK() {
     }
 
     override fun mouseClicked(e: MouseEvent) {
-        super.mouseClicked(e)
-        shapes[current].mouseClicked(e)
-        redraw()
+        if (gui.isMouseOutsideGui) {
+            super.mouseClicked(e)
+            shapes[current].mouseClicked(e)
+            redraw()
+        }
     }
 
     inner class Shape(index: Int) {
@@ -139,7 +141,7 @@ class Moire : ProcessingAppK() {
             if (!looping) {
                 return
             }
-            noiseOffset = noiseOffset.add(randomVector(0.0004f, 0.0004f))
+            noiseOffset = noiseOffset.add(randomVector(0.0008f, 0.0004f))
         }
 
         private fun buildPerlinSpiral(): List<PVector> {
