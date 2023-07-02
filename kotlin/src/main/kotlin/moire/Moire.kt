@@ -9,6 +9,7 @@ import p5.ProcessingAppK
 import processing.core.PApplet
 import processing.core.PConstants
 import processing.core.PVector
+import processing.event.KeyEvent
 import processing.event.MouseEvent
 import util.Size
 import kotlin.math.roundToInt
@@ -16,9 +17,9 @@ import kotlin.math.roundToInt
 class Moire : ProcessingAppK() {
     private var animate = true
 
-    private var addShape: Boolean by LazyGuiControlDelegate("button")
     private val shapes = mutableListOf<Shape>()
-    private var current = 0
+    private var addShape: Boolean by LazyGuiControlDelegate("button")
+    private var current: Int by LazyGuiControlDelegate("numberText", "", 0)
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -82,20 +83,23 @@ class Moire : ProcessingAppK() {
         when (cc) {
             0 -> addShape()
             1 -> current = (current + 1) % shapes.size
-//            2 -> colorCurrent = !colorCurrent
             else ->
                 super.controllerChangeAbs(channel, cc, value)
         }
     }
 
-    override fun mouseDragged(event: MouseEvent) {
-        mouseClicked(event)
+    override fun keyTyped(event: KeyEvent) {
+        super.keyTyped()
+        if (event.key in '0'..'9') {
+            controllerChangeAbs(1, event.key.toString().toInt() - 1, 0)
+        }
     }
 
-    override fun mouseClicked(e: MouseEvent) {
+    override fun mouseDragged(event: MouseEvent) = mousePressed(event)
+    override fun mousePressed(event: MouseEvent) {
         if (gui.isMouseOutsideGui) {
-            super.mouseClicked(e)
-            shapes[current].mouseClicked(e)
+            super.mousePressed(event)
+            shapes[current].mousePressed(event)
             redraw()
         }
     }
@@ -158,9 +162,10 @@ class Moire : ProcessingAppK() {
             "centerX" to randomNoiseOffset(),
             "centerY" to randomNoiseOffset(),
         )
+
         private fun randomNoiseOffset() = random(100000f)
         private fun mappedNoise(offsetKey: String, scale: Float = 0.0001f) =
-            scale*map(noise(noiseOffsets[offsetKey]!!), 0f, 1f, -0.5f, 1f)
+            scale * map(noise(noiseOffsets[offsetKey]!!), 0f, 1f, -0.5f, 1f)
 
         private fun update() {
             if (!looping) {
@@ -175,7 +180,7 @@ class Moire : ProcessingAppK() {
             center =
                 center.add(mappedNoise("centerX", 0.01f), mappedNoise("centerY", 0.01f))
 
-            noiseOffsets.keys.forEach{
+            noiseOffsets.keys.forEach {
                 noiseOffsets[it] = noiseOffsets[it]!! + offsetOffsetStep
 //                noiseOffsets[it]!!.add(0.01f, 0.01f)
             }
@@ -206,7 +211,7 @@ class Moire : ProcessingAppK() {
 
         private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
 
-        fun mouseClicked(e: MouseEvent) {
+        fun mousePressed(e: MouseEvent) {
             if (e.button == PConstants.LEFT) {
                 center = PVector(mouseX.toFloat(), mouseY.toFloat())
             }

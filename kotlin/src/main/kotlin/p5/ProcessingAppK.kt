@@ -174,8 +174,8 @@ open class ProcessingAppK : ProcessingApp() {
         }
     }
 
-    override fun keyTyped(e: KeyEvent) {
-        when (e.key) {
+    override fun keyTyped(event: KeyEvent) {
+        when (event.key) {
             'R' -> exportNextFrameSvg = true
             'S' -> screenshot()
             'c' -> clear()

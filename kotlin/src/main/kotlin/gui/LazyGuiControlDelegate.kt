@@ -3,6 +3,7 @@ package gui
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.LowerDotCaseStrategy
 import com.krab.lazy.LazyGui
 import com.krab.lazy.stores.GlobalReferences
+import processing.core.PVector
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KCallable
 import kotlin.reflect.KProperty
@@ -55,13 +56,20 @@ class LazyGuiControlDelegate<T>(
         controlName = LowerDotCaseStrategy().translate(propertyName).replace(".", " ")
 
         if (defaultValue != null) {
-            LazyGui::class.members
-                .find(this::matchingDefaultValueMethod)!!
-                .call(gui, controlPath(), defaultValue)
+            when (controlType) {
+                "numberText" -> gui.text(controlPath(), defaultValue.toString())
+                else ->
+                    LazyGui::class.members
+                        .find(this::matchingDefaultValueMethod)!!
+                        .call(gui, controlPath(), defaultValue)
+            }
         }
 
-        getter = gui::class.members
-            .find { it.name == controlType && it.parameters.size == 2 }!!
+        getter = when (controlType) {
+            "numberText" -> gui::numberText
+            else -> gui::class.members
+                .find { it.name == controlType && it.parameters.size == 2 }!!
+        }
 
         val setterName = when (controlType) {
             "plotXY" -> "plotSet"
@@ -70,6 +78,7 @@ class LazyGuiControlDelegate<T>(
         setter = when (controlType) {
             "button" -> gui::buttonSet
             "plotXY" -> gui::plotSetVector
+            "numberText" -> gui::numberTextSet
             else -> gui::class.members.find { it.name == setterName && it.parameters.size == 3 }!!
         }
     }
@@ -82,3 +91,8 @@ class LazyGuiControlDelegate<T>(
                     KOT_TO_JVM_SIMPLE_NAME.getOrDefault(it, it)
                 }
 }
+
+fun LazyGui.buttonSet(gui: LazyGui, path: String, value: Boolean) = button(path)
+fun LazyGui.plotSetVector(gui: LazyGui, path: String, v: PVector) = plotSet(path, v)
+fun LazyGui.numberText(gui: LazyGui, path: String) = text(path).toInt()
+fun LazyGui.numberTextSet(gui: LazyGui, path: String, value: Int) = textSet(path, value.toString())
