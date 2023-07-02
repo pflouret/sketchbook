@@ -31,7 +31,7 @@ class Moire : ProcessingAppK() {
         initMidi(MidiController.FIGHTER)
         initGui()
 
-        noiseDetail(4, 0.2f)
+        noiseDetail(3, 0.3f)
 
         if (!animate) {
             noLoop()
@@ -88,6 +88,10 @@ class Moire : ProcessingAppK() {
         }
     }
 
+    override fun mouseDragged(event: MouseEvent) {
+        mouseClicked(event)
+    }
+
     override fun mouseClicked(e: MouseEvent) {
         if (gui.isMouseOutsideGui) {
             super.mouseClicked(e)
@@ -101,7 +105,11 @@ class Moire : ProcessingAppK() {
         private val internalFolder = "shapes/$index/internal"
         private var radiusStep: Float by LazyGuiControlDelegate("slider", folder, ANGLE_STEP / 2)
         private var revolutions: Float by LazyGuiControlDelegate("slider", folder, 100f)
-        private var center: PVector by LazyGuiControlDelegate("plotXY", folder, PVector(w2, h2))
+        private var center: PVector by LazyGuiControlDelegate(
+            "plotXY",
+            folder,
+            PVector(w2, h2).add(random(-25, 25), random(-25, 25))
+        )
         private var coordinateOffset: PVector by LazyGuiControlDelegate(
             "plotXY",
             folder,
@@ -115,7 +123,7 @@ class Moire : ProcessingAppK() {
         private var noiseVectorScale: Float by LazyGuiControlDelegate(
             "slider",
             folder,
-            random(0.002f, 0.005f)
+            random(0.0007f, 0.005f)
         )
         private var noiseScale: Float by LazyGuiControlDelegate("slider", folder, 0.5f)
         private var noiseSeed: Int by LazyGuiControlDelegate(
@@ -124,6 +132,8 @@ class Moire : ProcessingAppK() {
             random(1000000).toInt()
         )
         private var color: PickerColor by LazyGuiControlDelegate("colorPicker", folder, 0f)
+
+        private val offsetOffsetStep = random(0.03f)
 
         fun draw() {
             withPush {
@@ -137,11 +147,38 @@ class Moire : ProcessingAppK() {
             update()
         }
 
+        private val noiseOffsets = mutableMapOf(
+            "radius" to randomNoiseOffset(),
+            "revolutions" to randomNoiseOffset(),
+            "scale" to randomNoiseOffset(),
+            "vScale" to randomNoiseOffset(),
+            "color" to randomNoiseOffset(),
+            "coordX" to randomNoiseOffset(),
+            "coordY" to randomNoiseOffset(),
+            "centerX" to randomNoiseOffset(),
+            "centerY" to randomNoiseOffset(),
+        )
+        private fun randomNoiseOffset() = random(100000f)
+        private fun mappedNoise(offsetKey: String, scale: Float = 0.0001f) =
+            scale*map(noise(noiseOffsets[offsetKey]!!), 0f, 1f, -0.5f, 1f)
+
         private fun update() {
             if (!looping) {
                 return
             }
             noiseOffset = noiseOffset.add(randomVector(0.0008f, 0.0004f))
+            radiusStep += mappedNoise("radius", 0.00001f)
+            noiseScale += mappedNoise("scale", 0.001f)
+            noiseVectorScale += mappedNoise("vScale", 0.000001f)
+            coordinateOffset =
+                coordinateOffset.add(mappedNoise("coordX", 0.01f), mappedNoise("coordY", 0.01f))
+            center =
+                center.add(mappedNoise("centerX", 0.01f), mappedNoise("centerY", 0.01f))
+
+            noiseOffsets.keys.forEach{
+                noiseOffsets[it] = noiseOffsets[it]!! + offsetOffsetStep
+//                noiseOffsets[it]!!.add(0.01f, 0.01f)
+            }
         }
 
         private fun buildPerlinSpiral(): List<PVector> {
