@@ -3,7 +3,6 @@ package gui
 import com.krab.lazy.LazyGui
 import com.krab.lazy.nodes.FolderNode
 import com.krab.lazy.stores.NodeTree
-import processing.core.PVector
 
 fun LazyGui.clearNodeTreeCache() {
     NodeTree::class.java.getDeclaredField("nodesByPath").let {

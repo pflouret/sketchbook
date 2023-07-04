@@ -94,5 +94,7 @@ class LazyGuiControlDelegate<T>(
 
 fun LazyGui.buttonSet(gui: LazyGui, path: String, value: Boolean) = button(path)
 fun LazyGui.plotSetVector(gui: LazyGui, path: String, v: PVector) = plotSet(path, v)
-fun LazyGui.numberText(gui: LazyGui, path: String) = text(path).toInt()
+fun LazyGui.numberText(gui: LazyGui, path: String) = try {
+    text(path).toInt()
+} catch (e: NullPointerException) { 0 }
 fun LazyGui.numberTextSet(gui: LazyGui, path: String, value: Int) = textSet(path, value.toString())

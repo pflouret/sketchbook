@@ -5,6 +5,7 @@ import gui.LazyGuiControlDelegate
 import gui.clearFolderChildren
 import gui.clearNodeTreeCache
 import midi.MidiController
+import p5.PaperSize
 import p5.ProcessingAppK
 import processing.core.PApplet
 import processing.core.PConstants
@@ -15,7 +16,7 @@ import util.Size
 import kotlin.math.roundToInt
 
 class Moire : ProcessingAppK() {
-    private var animate = true
+    private var animate = false
 
     private val shapes = mutableListOf<Shape>()
     private var addShape: Boolean by LazyGuiControlDelegate("button")
@@ -67,6 +68,7 @@ class Moire : ProcessingAppK() {
 
     private fun addShape() {
         shapes.add(Shape(shapes.size))
+        current = shapes.size - 1
     }
 
     override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
@@ -89,7 +91,7 @@ class Moire : ProcessingAppK() {
     }
 
     override fun keyTyped(event: KeyEvent) {
-        super.keyTyped()
+        super.keyTyped(event)
         if (event.key in '0'..'9') {
             controllerChangeAbs(1, event.key.toString().toInt() - 1, 0)
         }
@@ -236,8 +238,9 @@ class Moire : ProcessingAppK() {
     companion object {
         const val ANGLE_STEP = 0.3f
 
-        val SIZE = Size(700, 700)
-        //  val SIZE = PaperSize.ORIGAMI_150.size
+        val SIZE = PaperSize.INDEX_CARD.size
+//        val SIZE = Size(700, 700)
+//        val SIZE = PaperSize.ORIGAMI_150.size
     }
 }
 

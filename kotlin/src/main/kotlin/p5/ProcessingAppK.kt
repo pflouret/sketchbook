@@ -98,6 +98,7 @@ open class ProcessingAppK : ProcessingApp() {
         }
 
         if (exportNextFrameSvg) {
+            LayoutStore.setIsGuiHidden(true)
             makeSketchFilename("%s_####.svg").also {
                 beginRecord(SVG, it)
                 println(it)
@@ -113,11 +114,8 @@ open class ProcessingAppK : ProcessingApp() {
     }
 
     fun post() {
-        if (exportNextFrameSvg) {
-            endRecord()
-            exportNextFrameSvg = false
-        }
-
+        exportNextFrameSvg = false
+        try { endRecord() } catch (_: RuntimeException) { recorder = null }
         video?.saveFrame()
     }
 
@@ -222,8 +220,8 @@ open class ProcessingAppK : ProcessingApp() {
             13 -> reset()
             14 -> exportNextFrameSvg = true
             15 -> exit()
-            else -> return
         }
+        redraw()
     }
     open fun controllerChangeRel(channel: Int, cc: Int, value: Int) {}
 
