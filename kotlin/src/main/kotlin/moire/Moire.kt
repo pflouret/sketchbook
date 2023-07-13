@@ -19,7 +19,8 @@ class Moire : ProcessingAppK() {
     private var animate = false
 
     private val shapes = mutableListOf<Shape>()
-    private var addShape: Boolean by LazyGuiControlDelegate("button")
+    private var addSpiral: Boolean by LazyGuiControlDelegate("button")
+    private var addRect: Boolean by LazyGuiControlDelegate("button")
     private var current: Int by LazyGuiControlDelegate("numberText", "", 0)
 
     override fun settings() {
@@ -33,7 +34,7 @@ class Moire : ProcessingAppK() {
         initMidi(MidiController.FIGHTER)
         initGui()
 
-        noiseDetail(3, 0.3f)
+        noiseDetail(5, 0.3f)
 
         if (!animate) {
             noLoop()
@@ -41,7 +42,7 @@ class Moire : ProcessingAppK() {
 
         // FIXME: load from saved state
         if (shapes.isEmpty()) {
-            addShape()
+            addSpiral()
         }
     }
 
@@ -59,15 +60,24 @@ class Moire : ProcessingAppK() {
         noFill()
         stroke(0)
 
-        if (addShape) {
-            addShape()
+        if (addSpiral) {
+            addSpiral()
         }
+        if (addRect) {
+            addRect()
+        }
+
 
         shapes.forEach(Shape::draw)
     }
 
-    private fun addShape() {
-        shapes.add(Shape(shapes.size))
+    private fun addSpiral() {
+        shapes.add(Spiral(shapes.size))
+        current = shapes.size - 1
+    }
+
+    private fun addRect() {
+        shapes.add(Spiral(shapes.size))
         current = shapes.size - 1
     }
 
@@ -83,7 +93,7 @@ class Moire : ProcessingAppK() {
         }
 
         when (cc) {
-            0 -> addShape()
+            0 -> addSpiral()
             1 -> current = (current + 1) % shapes.size
             else ->
                 super.controllerChangeAbs(channel, cc, value)
@@ -106,9 +116,16 @@ class Moire : ProcessingAppK() {
         }
     }
 
-    inner class Shape(index: Int) {
-        private val folder = "shapes/$index"
-        private val internalFolder = "shapes/$index/internal"
+    abstract inner class Shape(index: Int) {
+        val folder = "shapes/$index"
+        val internalFolder = "shapes/$index/internal"
+
+        abstract fun draw()
+        abstract fun mousePressed(e: MouseEvent)
+        abstract fun controllerChangeRel(channel: Int, cc: Int, value: Int)
+    }
+
+    inner class Spiral(index: Int) : Shape(index) {
         private var radiusStep: Float by LazyGuiControlDelegate("slider", folder, ANGLE_STEP / 2)
         private var revolutions: Float by LazyGuiControlDelegate("slider", folder, 100f)
         private var center: PVector by LazyGuiControlDelegate(
@@ -141,7 +158,7 @@ class Moire : ProcessingAppK() {
 
         private val offsetOffsetStep = random(0.03f)
 
-        fun draw() {
+        override fun draw() {
             withPush {
                 stroke(color.hex)
                 withShape {
@@ -213,13 +230,13 @@ class Moire : ProcessingAppK() {
 
         private fun spiralCoord(a: Float, r: Float) = PVector(r * cos(a), r * sin(a))
 
-        fun mousePressed(e: MouseEvent) {
+        override fun mousePressed(e: MouseEvent) {
             if (e.button == PConstants.LEFT) {
                 center = PVector(mouseX.toFloat(), mouseY.toFloat())
             }
         }
 
-        fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
+        override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
             when (cc) {
                 0 -> radiusStep += value * 0.0005f
                 1 -> revolutions += value
@@ -238,8 +255,8 @@ class Moire : ProcessingAppK() {
     companion object {
         const val ANGLE_STEP = 0.3f
 
-        val SIZE = PaperSize.INDEX_CARD.size
-//        val SIZE = Size(700, 700)
+//        val SIZE = PaperSize.INDEX_CARD.size
+        val SIZE = Size(1200, 1200)
 //        val SIZE = PaperSize.ORIGAMI_150.size
     }
 }
