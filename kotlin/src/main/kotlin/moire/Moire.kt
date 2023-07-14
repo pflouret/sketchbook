@@ -5,7 +5,6 @@ import gui.LazyGuiControlDelegate
 import gui.clearFolderChildren
 import gui.clearNodeTreeCache
 import midi.MidiController
-import p5.PaperSize
 import p5.ProcessingAppK
 import processing.core.PApplet
 import processing.core.PConstants
@@ -14,13 +13,15 @@ import processing.event.KeyEvent
 import processing.event.MouseEvent
 import util.Size
 import kotlin.math.roundToInt
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
 class Moire : ProcessingAppK() {
     private var animate = false
 
     private val shapes = mutableListOf<Shape>()
     private var addSpiral: Boolean by LazyGuiControlDelegate("button")
-    private var addRect: Boolean by LazyGuiControlDelegate("button")
+    private var addLinesRect: Boolean by LazyGuiControlDelegate("button")
     private var current: Int by LazyGuiControlDelegate("numberText", "", 0)
 
     override fun settings() {
@@ -43,6 +44,7 @@ class Moire : ProcessingAppK() {
         // FIXME: load from saved state
         if (shapes.isEmpty()) {
             addSpiral()
+//            addLinesRect()
         }
     }
 
@@ -63,8 +65,8 @@ class Moire : ProcessingAppK() {
         if (addSpiral) {
             addSpiral()
         }
-        if (addRect) {
-            addRect()
+        if (addLinesRect) {
+            addLinesRect()
         }
 
 
@@ -76,8 +78,8 @@ class Moire : ProcessingAppK() {
         current = shapes.size - 1
     }
 
-    private fun addRect() {
-        shapes.add(Spiral(shapes.size))
+    private fun addLinesRect() {
+        shapes.add(LinesRect(shapes.size))
         current = shapes.size - 1
     }
 
@@ -120,9 +122,32 @@ class Moire : ProcessingAppK() {
         val folder = "shapes/$index"
         val internalFolder = "shapes/$index/internal"
 
+        var prevParamValues: Map<String, Any?> = mapOf()
+
         abstract fun draw()
         abstract fun mousePressed(e: MouseEvent)
         abstract fun controllerChangeRel(channel: Int, cc: Int, value: Int)
+
+        inline fun <reified T : Shape> T.getParamMap(): Map<String, Any?> {
+            return T::class.declaredMemberProperties
+                .asSequence()
+                .onEach { it.isAccessible = true }
+                .filter { (it.getDelegate(this) as? LazyGuiControlDelegate<*>) != null }
+                .associate {
+                    it.name to it.get(this).let { value ->
+                        when (value) {
+                            is PickerColor -> value.hex
+                            else -> value
+                        }
+                    }
+                }
+        }
+
+        inline fun <reified T : Shape> T.paramsChanged(): Boolean = prevParamValues != getParamMap()
+        inline fun <reified T : Shape> T.saveParamValues() {
+            prevParamValues = getParamMap()
+        }
+
     }
 
     inner class Spiral(index: Int) : Shape(index) {
@@ -157,13 +182,19 @@ class Moire : ProcessingAppK() {
         private var color: PickerColor by LazyGuiControlDelegate("colorPicker", folder, 0f)
 
         private val offsetOffsetStep = random(0.03f)
+        private var spiral = buildPerlinSpiral()
 
         override fun draw() {
+            if (paramsChanged()) {
+                spiral = buildPerlinSpiral()
+                saveParamValues()
+            }
+
             withPush {
                 stroke(color.hex)
                 withShape {
                     translate(center)
-                    buildPerlinSpiral().map(::curveVertex)
+                    spiral.map(::curveVertex)
                 }
             }
 
@@ -201,7 +232,6 @@ class Moire : ProcessingAppK() {
 
             noiseOffsets.keys.forEach {
                 noiseOffsets[it] = noiseOffsets[it]!! + offsetOffsetStep
-//                noiseOffsets[it]!!.add(0.01f, 0.01f)
             }
         }
 
@@ -252,11 +282,140 @@ class Moire : ProcessingAppK() {
         }
     }
 
+    inner class LinesRect(index: Int) : Shape(index) {
+        private var steps: Int by LazyGuiControlDelegate("sliderInt", folder, 500)
+        private var totalLines: Int by LazyGuiControlDelegate("sliderInt", folder, 150)
+        private var topLeft: PVector by LazyGuiControlDelegate(
+            "plotXY",
+            folder,
+            PVector(0f, 0f).add(random(100, 100), random(0, 100))
+        )
+        private var coordinateOffset: PVector by LazyGuiControlDelegate(
+            "plotXY",
+            folder,
+            PVector(random(3), random(3))
+        )
+        private var noiseOffset: PVector by LazyGuiControlDelegate(
+            "plotXY",
+            folder,
+            PVector(random(3), random(3))
+        )
+        private var noisePositionScale: Float by LazyGuiControlDelegate(
+            "slider",
+            folder,
+            random(0.0007f, 0.009f)
+        )
+        private var noiseScale: Float by LazyGuiControlDelegate("slider", folder, 10f)
+        private var noiseSeed: Int by LazyGuiControlDelegate(
+            "sliderInt",
+            internalFolder,
+            random(1000000).toInt()
+        )
+        private var color: PickerColor by LazyGuiControlDelegate("colorPicker", folder, 0f)
+
+        private val offsetOffsetStep = random(0.03f)
+        private var lines = buildPerlinLines()
+
+        override fun draw() {
+            if (paramsChanged()) {
+                lines = buildPerlinLines()
+                saveParamValues()
+            }
+
+            withPush {
+                stroke(color.hex)
+                translate(topLeft)
+                buildPerlinLines().map {
+                    withShape {
+                        it.map(::curveVertex)
+                    }
+                }
+            }
+//            update()
+        }
+
+        private val noiseOffsets = mutableMapOf(
+            "radius" to randomNoiseOffset(),
+            "revolutions" to randomNoiseOffset(),
+            "scale" to randomNoiseOffset(),
+            "vScale" to randomNoiseOffset(),
+            "color" to randomNoiseOffset(),
+            "coordX" to randomNoiseOffset(),
+            "coordY" to randomNoiseOffset(),
+            "topLeftX" to randomNoiseOffset(),
+            "topLeftY" to randomNoiseOffset(),
+        )
+
+        private fun randomNoiseOffset() = random(100000f)
+        private fun mappedNoise(offsetKey: String, scale: Float = 0.0001f) =
+            scale * map(noise(noiseOffsets[offsetKey]!!), 0f, 1f, -0.5f, 1f)
+
+        private fun update() {
+            if (!looping) {
+                return
+            }
+            noiseOffset = noiseOffset.add(randomVector(0.0008f, 0.0004f))
+//            steps += mappedNoise("radius", 0.00001f)
+            noiseScale += mappedNoise("scale", 0.001f)
+            noisePositionScale += mappedNoise("vScale", 0.000001f)
+            coordinateOffset =
+                coordinateOffset.add(mappedNoise("coordX", 0.01f), mappedNoise("coordY", 0.01f))
+            topLeft =
+                topLeft.add(mappedNoise("centerX", 0.01f), mappedNoise("centerY", 0.01f))
+
+            noiseOffsets.keys.forEach {
+                noiseOffsets[it] = noiseOffsets[it]!! + offsetOffsetStep
+            }
+        }
+
+        private fun buildPerlinLines(): List<List<PVector>> {
+            noiseSeed(noiseSeed.toLong())
+
+            val lines = mutableListOf<List<PVector>>()
+
+            var x = 0f
+            for (j in 0..totalLines) {
+                val line = mutableListOf<PVector>()
+                var y = 0f
+                for (step in 0..steps) {
+                    val noisePosition = PVector(x * noisePositionScale, y).add(noiseOffset)
+                    line.add(PVector(x + noise(noisePosition) * noiseScale, step.toFloat()))
+                    y += 0.01f
+                }
+                lines.add(line)
+                x += 5f
+            }
+
+            return lines
+        }
+
+        override fun mousePressed(e: MouseEvent) {
+            if (e.button == PConstants.LEFT) {
+                topLeft = PVector(mouseX.toFloat(), mouseY.toFloat())
+            }
+        }
+
+        override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
+            when (cc) {
+                0 -> steps += value
+                1 -> totalLines += value
+                2 -> noisePositionScale += value * 0.0001f
+                3 -> noiseScale += value * 0.01f
+                4 -> coordinateOffset = coordinateOffset.add(value * 0.5f, 0f)
+                5 -> coordinateOffset = coordinateOffset.add(0f, value * 0.5f)
+                6 -> noiseOffset = noiseOffset.add(PVector(value * 0.05f, 0f))
+                7 -> noiseOffset = noiseOffset.add(PVector(0f, value * 0.05f))
+                8 -> topLeft = topLeft.add(value.toFloat(), 0f)
+                9 -> topLeft = topLeft.add(0f, value.toFloat())
+            }
+        }
+    }
+
     companion object {
         const val ANGLE_STEP = 0.3f
 
-//        val SIZE = PaperSize.INDEX_CARD.size
-        val SIZE = Size(1200, 1200)
+        //        val SIZE = PaperSize.INDEX_CARD.size
+        val SIZE = Size(1000, 1000)
 //        val SIZE = PaperSize.ORIGAMI_150.size
     }
 }
