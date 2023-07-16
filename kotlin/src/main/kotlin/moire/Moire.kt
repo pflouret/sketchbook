@@ -43,8 +43,8 @@ class Moire : ProcessingAppK() {
 
         // FIXME: load from saved state
         if (shapes.isEmpty()) {
-            addSpiral()
-//            addLinesRect()
+//            addSpiral()
+            addLinesRect()
         }
     }
 
@@ -56,12 +56,6 @@ class Moire : ProcessingAppK() {
     }
 
     override fun draw() {
-        if (!exportNextFrameSvg) {
-            background(255)
-        }
-        noFill()
-        stroke(0)
-
         if (addSpiral) {
             addSpiral()
         }
@@ -69,6 +63,14 @@ class Moire : ProcessingAppK() {
             addLinesRect()
         }
 
+        if (!exportNextFrameSvg) {
+            if (frameCount != 1 && shapes.none { it.changed() }) {
+                return
+            }
+            background(255)
+        }
+        noFill()
+        stroke(0)
 
         shapes.forEach(Shape::draw)
     }
@@ -125,8 +127,8 @@ class Moire : ProcessingAppK() {
         var prevParamValues: Map<String, Any?> = mapOf()
 
         abstract fun draw()
-        abstract fun mousePressed(e: MouseEvent)
-        abstract fun controllerChangeRel(channel: Int, cc: Int, value: Int)
+        open fun mousePressed(e: MouseEvent) {}
+        open fun controllerChangeRel(channel: Int, cc: Int, value: Int) {}
 
         inline fun <reified T : Shape> T.getParamMap(): Map<String, Any?> {
             return T::class.declaredMemberProperties
@@ -143,7 +145,8 @@ class Moire : ProcessingAppK() {
                 }
         }
 
-        inline fun <reified T : Shape> T.paramsChanged(): Boolean = prevParamValues != getParamMap()
+        abstract fun changed(): Boolean
+        inline fun <reified T : Shape> T.paramsChanged() = prevParamValues != getParamMap()
         inline fun <reified T : Shape> T.saveParamValues() {
             prevParamValues = getParamMap()
         }
@@ -183,6 +186,8 @@ class Moire : ProcessingAppK() {
 
         private val offsetOffsetStep = random(0.03f)
         private var spiral = buildPerlinSpiral()
+
+        override fun changed() = paramsChanged()
 
         override fun draw() {
             if (paramsChanged()) {
@@ -283,48 +288,45 @@ class Moire : ProcessingAppK() {
     }
 
     inner class LinesRect(index: Int) : Shape(index) {
-        private var steps: Int by LazyGuiControlDelegate("sliderInt", folder, 500)
-        private var totalLines: Int by LazyGuiControlDelegate("sliderInt", folder, 150)
+        private var xStepSeparation: Float by LazyGuiControlDelegate("slider", folder, random(2, 5))
+        private var xSteps: Int by LazyGuiControlDelegate("sliderInt", folder, 100)
+        private var ySteps: Int by LazyGuiControlDelegate("sliderInt", folder, 400)
+        private var yHeight: Float by LazyGuiControlDelegate("slider", folder, 500f)
+        private var angle: Float by LazyGuiControlDelegate("slider", folder, random(-0.01f, 0.01f))
         private var topLeft: PVector by LazyGuiControlDelegate(
-            "plotXY",
-            folder,
-            PVector(0f, 0f).add(random(100, 100), random(0, 100))
+            "plotXY", folder, randomVector(100f, 100f)
         )
-        private var coordinateOffset: PVector by LazyGuiControlDelegate(
-            "plotXY",
-            folder,
-            PVector(random(3), random(3))
-        )
+
+        //        private var coordinateOffset: PVector by LazyGuiControlDelegate(
+//            "plotXY", folder, PVector(random(3), random(3))
+//        )
         private var noiseOffset: PVector by LazyGuiControlDelegate(
-            "plotXY",
-            folder,
-            PVector(random(3), random(3))
+            "plotXY", folder, PVector(random(3), random(3))
         )
         private var noisePositionScale: Float by LazyGuiControlDelegate(
-            "slider",
-            folder,
-            random(0.0007f, 0.009f)
+            "slider", folder, random(0.007f, 0.07f)
         )
         private var noiseScale: Float by LazyGuiControlDelegate("slider", folder, 10f)
         private var noiseSeed: Int by LazyGuiControlDelegate(
-            "sliderInt",
-            internalFolder,
-            random(1000000).toInt()
+            "sliderInt", internalFolder, random(1000000).toInt()
         )
         private var color: PickerColor by LazyGuiControlDelegate("colorPicker", folder, 0f)
 
         private val offsetOffsetStep = random(0.03f)
         private var lines = buildPerlinLines()
 
+        override fun changed() = paramsChanged()
+
         override fun draw() {
-            if (paramsChanged()) {
+            if (getParamMap() != prevParamValues) {
                 lines = buildPerlinLines()
-                saveParamValues()
+                prevParamValues = getParamMap()
             }
 
             withPush {
                 stroke(color.hex)
                 translate(topLeft)
+                rotate(angle)
                 buildPerlinLines().map {
                     withShape {
                         it.map(::curveVertex)
@@ -350,43 +352,37 @@ class Moire : ProcessingAppK() {
         private fun mappedNoise(offsetKey: String, scale: Float = 0.0001f) =
             scale * map(noise(noiseOffsets[offsetKey]!!), 0f, 1f, -0.5f, 1f)
 
-        private fun update() {
-            if (!looping) {
-                return
-            }
-            noiseOffset = noiseOffset.add(randomVector(0.0008f, 0.0004f))
-//            steps += mappedNoise("radius", 0.00001f)
-            noiseScale += mappedNoise("scale", 0.001f)
-            noisePositionScale += mappedNoise("vScale", 0.000001f)
-            coordinateOffset =
-                coordinateOffset.add(mappedNoise("coordX", 0.01f), mappedNoise("coordY", 0.01f))
-            topLeft =
-                topLeft.add(mappedNoise("centerX", 0.01f), mappedNoise("centerY", 0.01f))
-
-            noiseOffsets.keys.forEach {
-                noiseOffsets[it] = noiseOffsets[it]!! + offsetOffsetStep
-            }
-        }
+//        private fun update() {
+//            if (!looping) {
+//                return
+//            }
+//            noiseOffset = noiseOffset.add(randomVector(0.0008f, 0.0004f))
+////            steps += mappedNoise("radius", 0.00001f)
+//            noiseScale += mappedNoise("scale", 0.001f)
+//            noisePositionScale += mappedNoise("vScale", 0.000001f)
+//            coordinateOffset =
+//                coordinateOffset.add(mappedNoise("coordX", 0.01f), mappedNoise("coordY", 0.01f))
+//            topLeft =
+//                topLeft.add(mappedNoise("centerX", 0.01f), mappedNoise("centerY", 0.01f))
+//
+//            noiseOffsets.keys.forEach {
+//                noiseOffsets[it] = noiseOffsets[it]!! + offsetOffsetStep
+//            }
+//        }
 
         private fun buildPerlinLines(): List<List<PVector>> {
             noiseSeed(noiseSeed.toLong())
-
-            val lines = mutableListOf<List<PVector>>()
-
-            var x = 0f
-            for (j in 0..totalLines) {
-                val line = mutableListOf<PVector>()
-                var y = 0f
-                for (step in 0..steps) {
-                    val noisePosition = PVector(x * noisePositionScale, y).add(noiseOffset)
-                    line.add(PVector(x + noise(noisePosition) * noiseScale, step.toFloat()))
-                    y += 0.01f
+            val yStepLen = yHeight / ySteps
+            return (0..xSteps).map { x ->
+                (0..ySteps).map { y ->
+                    val noise = noise(
+                        PVector(x * xStepSeparation, y.toFloat())
+                            .mult(noisePositionScale)
+                            .add(noiseOffset)
+                    )
+                    PVector(x * xStepSeparation + noise * noiseScale, yStepLen * y)
                 }
-                lines.add(line)
-                x += 5f
             }
-
-            return lines
         }
 
         override fun mousePressed(e: MouseEvent) {
@@ -395,26 +391,27 @@ class Moire : ProcessingAppK() {
             }
         }
 
-        override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
-            when (cc) {
-                0 -> steps += value
-                1 -> totalLines += value
-                2 -> noisePositionScale += value * 0.0001f
-                3 -> noiseScale += value * 0.01f
-                4 -> coordinateOffset = coordinateOffset.add(value * 0.5f, 0f)
-                5 -> coordinateOffset = coordinateOffset.add(0f, value * 0.5f)
-                6 -> noiseOffset = noiseOffset.add(PVector(value * 0.05f, 0f))
-                7 -> noiseOffset = noiseOffset.add(PVector(0f, value * 0.05f))
-                8 -> topLeft = topLeft.add(value.toFloat(), 0f)
-                9 -> topLeft = topLeft.add(0f, value.toFloat())
-            }
-        }
+//        override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
+//            when (cc) {
+//                0 -> steps += value
+//                1 -> totalLines += value
+//                2 -> noisePositionScale += value * 0.0001f
+//                3 -> noiseScale += value * 0.01f
+//                4 -> coordinateOffset = coordinateOffset.add(value * 0.5f, 0f)
+//                5 -> coordinateOffset = coordinateOffset.add(0f, value * 0.5f)
+//                6 -> noiseOffset = noiseOffset.add(PVector(value * 0.05f, 0f))
+//                7 -> noiseOffset = noiseOffset.add(PVector(0f, value * 0.05f))
+//                8 -> topLeft = topLeft.add(value.toFloat(), 0f)
+//                9 -> topLeft = topLeft.add(0f, value.toFloat())
+//            }
+//        }
     }
 
     companion object {
         const val ANGLE_STEP = 0.3f
 
-        //        val SIZE = PaperSize.INDEX_CARD.size
+//        val SIZE = PaperSize.INDEX_CARD.size
+//        val SIZE = PaperSize.INDEX_CARD.landscape()
         val SIZE = Size(1000, 1000)
 //        val SIZE = PaperSize.ORIGAMI_150.size
     }

@@ -194,7 +194,7 @@ open class ProcessingAppK : ProcessingApp() {
 
     override fun handleMouseEvent(event: MouseEvent?) {
         super.handleMouseEvent(event)
-        if (::gui.isInitialized) {
+        if (::gui.isInitialized /*&& !gui.isMouseOutsideGui*/) {
             redraw()
         }
     }
