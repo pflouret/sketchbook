@@ -290,9 +290,13 @@ class Moire : ProcessingAppK() {
     inner class LinesRect(index: Int) : Shape(index) {
         private var xStepSeparation: Float by LazyGuiControlDelegate("slider", folder, random(2, 5))
         private var xSteps: Int by LazyGuiControlDelegate("sliderInt", folder, 100)
-        private var ySteps: Int by LazyGuiControlDelegate("sliderInt", folder, 400)
-        private var yHeight: Float by LazyGuiControlDelegate("slider", folder, 500f)
-        private var angle: Float by LazyGuiControlDelegate("slider", folder, random(-0.01f, 0.01f))
+        private var ySteps: Int by LazyGuiControlDelegate("sliderInt", folder, 300)
+        private var yHeight: Float by LazyGuiControlDelegate("slider", folder, 400f)
+        private var angle: Float by LazyGuiControlDelegate(
+            "slider",
+            folder,
+            random(-0.007f, 0.007f)
+        )
         private var topLeft: PVector by LazyGuiControlDelegate(
             "plotXY", folder, randomVector(100f, 100f)
         )
@@ -391,28 +395,31 @@ class Moire : ProcessingAppK() {
             }
         }
 
-//        override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
-//            when (cc) {
-//                0 -> steps += value
-//                1 -> totalLines += value
-//                2 -> noisePositionScale += value * 0.0001f
-//                3 -> noiseScale += value * 0.01f
-//                4 -> coordinateOffset = coordinateOffset.add(value * 0.5f, 0f)
-//                5 -> coordinateOffset = coordinateOffset.add(0f, value * 0.5f)
-//                6 -> noiseOffset = noiseOffset.add(PVector(value * 0.05f, 0f))
-//                7 -> noiseOffset = noiseOffset.add(PVector(0f, value * 0.05f))
-//                8 -> topLeft = topLeft.add(value.toFloat(), 0f)
-//                9 -> topLeft = topLeft.add(0f, value.toFloat())
-//            }
-//        }
+        override fun controllerChangeRel(channel: Int, cc: Int, value: Int) {
+            when (cc) {
+                0 -> xStepSeparation += value * 0.01f
+                1 -> ySteps += value
+                2 -> noisePositionScale += value * 0.0001f
+                3 -> noiseScale += value * 0.1f
+
+                4 -> xSteps += value
+                5 -> yHeight += value
+                6 -> angle += value * 0.001f
+
+                8 -> noiseOffset = noiseOffset.add(value * 0.005f, 0f)
+                9 -> noiseOffset = noiseOffset.add(0f, value * 0.005f)
+                10 -> topLeft = topLeft.add(value.toFloat(), 0f)
+                11 -> topLeft = topLeft.add(0f, value.toFloat())
+            }
+        }
     }
 
     companion object {
         const val ANGLE_STEP = 0.3f
 
+        val SIZE = Size(1000, 1000)
 //        val SIZE = PaperSize.INDEX_CARD.size
 //        val SIZE = PaperSize.INDEX_CARD.landscape()
-        val SIZE = Size(1000, 1000)
 //        val SIZE = PaperSize.ORIGAMI_150.size
     }
 }
