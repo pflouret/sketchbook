@@ -153,10 +153,10 @@ open class ProcessingAppK : ProcessingApp() {
     open fun translate(v: PVector) = translate(v.x, v.y)
     fun inViewport(v: PVector) = v.within(width, height)
 
-    fun withShape(block: () -> Unit) {
+    fun withShape(closeMode: Int = OPEN, block: () -> Unit) {
         beginShape()
         block()
-        endShape()
+        endShape(closeMode)
     }
 
     fun withPush(block: () -> Unit) {

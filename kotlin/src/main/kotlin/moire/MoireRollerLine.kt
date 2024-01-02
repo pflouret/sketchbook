@@ -6,14 +6,17 @@ import processing.core.PVector
 import util.Size
 
 class MoireRollerLine : ProcessingAppK() {
-    private val noisePositionScale = 0.015f
-    private val noiseScale = 10f
-    private val multiplier = 5
+    private val noisePositionScale = 0.01f
+    private val noiseScale = 1f
 
     private var x = 0f
     private var noiseX = 0f
     private lateinit var points: MutableList<PVector>
-    private var row = 0
+
+    companion object {
+        val SIZE = Size(1000, 50)
+        const val ROW_COLS = (3000 * 3.78).toInt()
+    }
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -26,55 +29,42 @@ class MoireRollerLine : ProcessingAppK() {
         noiseDetail(5, 0.3f)
         background(255)
 
-//        noLoop()
 
-//        points = (0..900).map { nextPoint() }.toMutableList()
-        points = mutableListOf()
-        update()
+        noLoop()
+        initPoints()
     }
 
     override fun reset() {
+        initPoints()
         redraw()
+    }
+
+    private fun initPoints() {
+        x = 0f
+        points = (0 until ROW_COLS).map { nextPoint() }.toMutableList()
     }
 
     override fun draw() {
         noFill()
         stroke(0)
 
-        val i = points.size - multiplier
+        background(255)
         withPush {
-            translate(50f, ROW_COLS + 50f - VERTICAL_SPACING * row)
-            withShape {
-                points.slice(i until points.size).forEach(::curveVertex)
+            withShape(closeMode = CLOSE) {
+                points.forEach(::curveVertex)
+                points.reversed().forEach { curveVertex(it.x, it.y + 2) }
             }
         }
-        update()
     }
 
-    private fun update() {
-        repeat(multiplier) {
-            points.add(nextPoint())
-        }
-
-        if (points.size % ROW_COLS == 0) {
-            row++
-            x = 0f
-//            points.clear()
-        }
-    }
 
     private fun nextPoint(): PVector {
         val noise = noise(
             PVector(noiseX++, 0f).mult(noisePositionScale)
         )
-        return PVector(x++, noise * noiseScale)
-    }
-
-
-    companion object {
-        val SIZE = Size(1000, 1000)
-        const val ROW_COLS = 900
-        const val VERTICAL_SPACING = 12f
+        val v = PVector(x, noise * noiseScale)
+        x += 10
+        return v
     }
 }
 
