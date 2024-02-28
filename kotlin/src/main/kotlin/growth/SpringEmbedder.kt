@@ -10,10 +10,10 @@ import java.util.Vector
 class SpringEmbedder : ProcessingAppK() {
     private var vertices = mutableListOf<TVertex>()
     private var splitDistance = 9f
-    private val splitProbability = 0.208f
+    private var splitProbability = 0.208f
     private var splitRandomness = 0.2f
 
-    private var drawPoints = true
+    private var drawPoints = false
     private var fillShape = false
 
     private val constrainToViewport = false
@@ -52,7 +52,7 @@ class SpringEmbedder : ProcessingAppK() {
             }
         }
         eames()
-        //fruchtermanReingold();
+//        fruchtermanReingold();
     }
 
     private fun drawShape() {
@@ -78,7 +78,7 @@ class SpringEmbedder : ProcessingAppK() {
 
     override fun reset() {
         vertices = mutableListOf()
-        temperature = 1f
+        temperature = 2f
         val r = 30f
         val initialPoly = listOf(
             PVector(r, 0f),
@@ -127,7 +127,7 @@ class SpringEmbedder : ProcessingAppK() {
             }
         }
 
-        vertices.forEach { a: TVertex ->
+        vertices.forEach { a ->
             val delta = PVector.mult(attractionDeltas[a]!!, attractionFactor)
                 .add(PVector.mult(repulsionDeltas[a]!!, repulsionStrength))
             val b = PVector.add(a, delta)
@@ -142,6 +142,60 @@ class SpringEmbedder : ProcessingAppK() {
         }
         noiseResample(false)
     }
+
+    private fun fruchtermanReingold() {
+        if (temperature <= 0) {
+            return
+        }
+
+        val area = (width * height).toFloat()
+        val repulsionRadius = 18f
+        splitDistance = 7f
+        splitProbability = 0.003f
+        splitRandomness = 0.3f
+
+        val attractionDeltas = mutableMapOf<TVertex?, PVector>()
+        for (a in vertices) {
+            val v = PVector.sub(a, a.next)
+            v.setMag(v.magSq() / sqrt(area / vertices.size))
+            attractionDeltas[a] = PVector.add(
+                attractionDeltas.getOrElse(a) { PVector(0f, 0f) },
+                v.mult(-1f)
+            )
+            attractionDeltas[a.next] = PVector.add(
+                attractionDeltas.getOrElse(a) { PVector(0f, 0f) },
+                v
+            )
+        }
+
+        val repulsionDeltas = vertices.associateWith { a ->
+            vertices.filter { b ->
+                b !== a && b !== a.prev && b !== a.next && a.dist(b) < repulsionRadius
+            }.map { b ->
+                PVector.sub(a, b).setMag(area / vertices.size / a.dist(b))
+            }.ifEmpty {
+                listOf(PVector(0f, 0f))
+            }.reduce { acc, v ->
+                acc.add(v)
+            }
+        }
+
+        vertices.forEach { a ->
+            val da = PVector.add(attractionDeltas[a]!!, repulsionDeltas[a])
+            val delta = da.setMag(.5f * min(da.mag(), temperature))
+            a.add(delta)
+            if (!constrainToViewport) {
+                a.set(
+                    min(w2 - padding, max(-w2 + padding, a.x)),
+                    min(h2 - padding, max(-h2 + padding, a.y))
+                )
+            }
+        }
+
+        noiseResample(false)
+        temperature -= .0001f
+    }
+
 
     private fun resample() {
         resample(splitProbability)
