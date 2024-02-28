@@ -140,11 +140,19 @@ open class ProcessingAppK : ProcessingApp() {
     open fun screenshot() = saveFrame(makeSketchFilename("%s_####.png"))
 
     open fun random() = random(1f)
-    open fun random(high: Int) = random(high.toFloat())
-    open fun random(low: Int, high: Int) = random(low.toFloat(), high.toFloat())
+    open fun random(high: Number) = random(high.toFloat())
+    open fun random(low: Number, high: Number) = random(low.toFloat(), high.toFloat())
     open fun randomVector() = randomVector(width.toFloat(), height.toFloat())
-    open fun randomVector(highX: Float, highY: Float) = PVector(random(highX), random(highY))
+    open fun randomVector(highX: Number, highY: Number) = PVector(random(highX), random(highY))
     open fun prob(probability: Float) = random(1) < probability
+    open fun map(value: Number, start1: Number, stop1: Number, start2: Number, stop2: Number) =
+        PApplet.map(
+            value.toFloat(),
+            start1.toFloat(),
+            stop1.toFloat(),
+            start2.toFloat(),
+            stop2.toFloat()
+        )
 
     open fun point(v: PVector) = point(v.x, v.y)
     open fun vertex(v: PVector) = vertex(v.x, v.y)
