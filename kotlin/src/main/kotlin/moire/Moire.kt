@@ -322,9 +322,9 @@ class Moire : ProcessingAppK() {
         override fun changed() = paramsChanged()
 
         override fun draw() {
-            if (getParamMap() != prevParamValues) {
+            if (paramsChanged()) {
                 lines = buildPerlinLines()
-                prevParamValues = getParamMap()
+                saveParamValues()
             }
 
             withPush {

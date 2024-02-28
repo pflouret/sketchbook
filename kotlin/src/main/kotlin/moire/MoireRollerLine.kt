@@ -6,8 +6,8 @@ import processing.core.PVector
 import util.Size
 
 class MoireRollerLine : ProcessingAppK() {
-    private val noisePositionScale = 0.01f
-    private val noiseScale = 1f
+    private val noisePositionScale = 0.013f
+    private val noiseScale = 5f
 
     private var x = 0f
     private var noiseX = 0f
@@ -15,7 +15,7 @@ class MoireRollerLine : ProcessingAppK() {
 
     companion object {
         val SIZE = Size(1000, 50)
-        const val ROW_COLS = (3000 * 3.78).toInt()
+        const val ROW_COLS = (1000 * 3.78).toInt()
     }
 
     override fun settings() {
