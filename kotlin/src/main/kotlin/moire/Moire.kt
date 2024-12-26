@@ -43,8 +43,8 @@ class Moire : ProcessingAppK() {
 
         // FIXME: load from saved state
         if (shapes.isEmpty()) {
-//            addSpiral()
-            addLinesRect()
+            addSpiral()
+//            addLinesRect()
         }
     }
 
@@ -71,6 +71,7 @@ class Moire : ProcessingAppK() {
         }
         noFill()
         stroke(0)
+        strokeWeight(2f)
 
         shapes.forEach(Shape::draw)
     }
@@ -155,7 +156,7 @@ class Moire : ProcessingAppK() {
 
     inner class Spiral(index: Int) : Shape(index) {
         private var radiusStep: Float by LazyGuiControlDelegate("slider", folder, ANGLE_STEP / 2)
-        private var revolutions: Float by LazyGuiControlDelegate("slider", folder, 100f)
+        private var revolutions: Float by LazyGuiControlDelegate("slider", folder, 50f)
         private var center: PVector by LazyGuiControlDelegate(
             "plotXY",
             folder,
@@ -415,9 +416,10 @@ class Moire : ProcessingAppK() {
     }
 
     companion object {
-        const val ANGLE_STEP = 0.3f
+        const val ANGLE_STEP = 0.9f
 
-        val SIZE = Size(1000, 1000)
+//        val SIZE = Size(1000, 1000)
+        val SIZE = Size(400, 400)
 //        val SIZE = PaperSize.INDEX_CARD.size
 //        val SIZE = PaperSize.INDEX_CARD.landscape()
 //        val SIZE = PaperSize.ORIGAMI_150.size
