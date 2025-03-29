@@ -17,6 +17,7 @@ import processing.event.MouseEvent
 import themidibus.MidiBus
 import java.util.Random
 import kotlin.math.roundToInt
+import kotlin.reflect.KProperty
 
 enum class PaperSize(val size: Size) {
     // at 96dpi, or thereabouts (whatever inkscape likes)
@@ -44,8 +45,20 @@ fun PVector.within(width: Int, height: Int) = x > 0 && x < width && y > 0 && y <
 open class ProcessingAppK : ProcessingApp() {
     var loadLatestSaveOnStartup = false
     var exportNextFrameSvg = false
-    var w2 = 0f
-    var h2 = 0f
+    val w2 by object {
+        operator fun getValue(thisRef: ProcessingAppK, property: KProperty<*>) = thisRef.width / 2f
+    }
+    val h2 by object {
+        operator fun getValue(thisRef: ProcessingAppK, property: KProperty<*>) = thisRef.height / 2f
+    }
+    val widthf by object {
+        operator fun getValue(thisRef: ProcessingAppK, property: KProperty<*>) =
+            thisRef.width.toFloat()
+    }
+    val heightf by object {
+        operator fun getValue(thisRef: ProcessingAppK, property: KProperty<*>) =
+            thisRef.height.toFloat()
+    }
 
     var midi: MidiBus? = null
     var video: VideoExport? = null
@@ -71,8 +84,6 @@ open class ProcessingAppK : ProcessingApp() {
 
         surface.setResizable(true)
         surface.setTitle(javaClass.simpleName.lowercase())
-        w2 = width / 2f
-        h2 = height / 2f
 
         if (saveVideo) {
             video = createVideoExporter().also { it.startMovie() }
@@ -185,7 +196,7 @@ open class ProcessingAppK : ProcessingApp() {
             'R' -> exportNextFrameSvg = true
             'S' -> screenshot()
             'c' -> clear()
-            'p' -> toggleLoop()
+            'p', ' ' -> toggleLoop()
             'x' -> reset()
             'V' -> {
                 video?.endMovie()
@@ -194,6 +205,7 @@ open class ProcessingAppK : ProcessingApp() {
             else -> {
             }
         }
+        println("<${event.key}>")
 
         if (redrawOnEvent || exportNextFrameSvg) {
             redraw()
