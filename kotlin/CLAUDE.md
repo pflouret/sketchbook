@@ -41,3 +41,4 @@ Class hierarchy for every sketch: `PApplet` → `ProcessingApp` (Java, `src/main
   with `draw()` on the animation thread. Don't let `draw()` read fields that event handlers mutate mid-update — build
   new state and swap it in as one immutable object (see `growth/TreeCuts.kt`).
 - Commit messages are prefixed with the sketch/package in brackets, e.g. `[agents] Rotation zones.`, `[p5] ...`.
+- Always keep in mind that the drawn output should be optimized to be able to be exported as svg paths, unless specified otherwise
