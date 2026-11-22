@@ -101,14 +101,15 @@ class TreeCuts : ProcessingAppK() {
         val maxR = min(width, height) * 0.4f
         val widths = yearWidths(maxR * (1 - barkThickness), years, taper, latewood)
         val minGap = 0.6f
-        var lean = random(TWO_PI)
+        val lean0 = random(TWO_PI)
         var r = FloatArray(samples) { 1.5f }
         val out = mutableListOf(r)
 
         for (i in 0 until years) {
             val w = widths[i]
             val roughness = 0.25f * w
-            lean += random(-0.08f, 0.08f)
+            // slow drift of the lean direction over the tree's life
+            val lean = lean0 + 3f * (noise(4000 + i * 0.04f) - 0.5f)
 
             val old = r
             val prev = smooth(old, 3)
@@ -162,14 +163,20 @@ class TreeCuts : ProcessingAppK() {
         return Tree(center, rings, latewood, inner, outer, strokes)
     }
 
-    /** Mean ring width per year: age taper times an autocorrelated "climate", scaled to maxR. */
+    /**
+     * Mean ring width per year: age taper times a "climate", scaled to maxR. Climate, droughts and
+     * latewood darkness all come from 1D Perlin noise over time, so neighbouring years are
+     * correlated (good runs, bad runs) and a drought ramps in and recovers over a couple of years.
+     */
     private fun yearWidths(maxR: Float, years: Int, taper: Float, latewood: FloatArray): FloatArray {
-        var climate = 1f
         val w = FloatArray(years) { i ->
-            climate = 0.6f * climate + 0.4f * random(0.5f, 1.5f)
-            if (prob(0.04f)) climate *= 0.35f  // drought year, recovery carries over via the 0.6
-            latewood[i + 1] = constrain(1.2f - 0.8f * climate + random(-0.15f, 0.15f), 0f, 1f)
-            (pow((i + 1f) / years, taper) - pow(i.toFloat() / years, taper)) * climate
+            var climate = map(noise(1000 + i * 0.15f), 0.25f, 0.75f, 0.5f, 1.5f)
+            // rare droughts: only the peaks of a faster noise channel get past the threshold
+            val drought = constrain((noise(2000 + i * 0.6f) - 0.66f) / 0.08f, 0f, 1f)
+            climate *= 1 - 0.65f * drought
+            val jitter = 0.3f * (noise(3000 + i * 0.7f) - 0.5f)
+            latewood[i + 1] = constrain(1.2f - 0.8f * climate + jitter, 0f, 1f)
+            (pow((i + 1f) / years, taper) - pow(i.toFloat() / years, taper)) * max(climate, 0.1f)
         }
         val scale = maxR / w.sum()
         return FloatArray(years) { w[it] * scale }
