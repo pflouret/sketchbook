@@ -16,19 +16,17 @@ class TreeCuts : ProcessingAppK() {
     private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
     private var taper: Float by LazyGuiControlDelegate("slider", "", 0.7f, 0.2f, 1f)  // 1 = even ring widths, lower = wide young rings, narrow old ones
     private var raySpacing: Float by LazyGuiControlDelegate("slider", "", 14f, 3f, 100f)  // px of circumference per ray
-    private var drawRays: Boolean by LazyGuiControlDelegate("toggle", "", true)
-    private var drawEarlywood: Boolean by LazyGuiControlDelegate("toggle", "", true)
     private var noiseOctaves: Int by LazyGuiControlDelegate("sliderInt", "", 4, 1, 8)
     private var noiseFalloff: Float by LazyGuiControlDelegate("slider", "", 0.5f, 0f, 1f)  // weight of each next octave
 
     /** The parameters that need a regrow, read from the gui once per frame. */
     private data class Params(
         val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
-        val raySpacing: Float, val drawRays: Boolean, val noiseOctaves: Int, val noiseFalloff: Float,
+        val raySpacing: Float, val noiseOctaves: Int, val noiseFalloff: Float,
     )
 
     private fun params() = Params(
-        years, barkThickness, eccentricity, taper, raySpacing, drawRays, noiseOctaves, noiseFalloff,
+        years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff,
     )
     private var grownWith: Params? = null
 
@@ -73,13 +71,10 @@ class TreeCuts : ProcessingAppK() {
         noFill()
         val tree = tree
         val latewood = tree.latewood
-        val drawEarlywood = drawEarlywood
         for (i in 1 until tree.rings.size) {
-            if (drawEarlywood) {
-                stroke(0f, 30f)
-                strokeWeight(0.5f)
-                tree.earlyPaths[i].forEach(::drawPath)
-            }
+            stroke(0f, 30f)
+            strokeWeight(0.5f)
+            tree.earlyPaths[i].forEach(::drawPath)
             stroke(0f, 90f + 140f * latewood[i])
             strokeWeight(0.6f + 1.4f * latewood[i])
             tree.ringPaths[i].forEach(::drawPath)
@@ -146,9 +141,7 @@ class TreeCuts : ProcessingAppK() {
             }
             out.add(r)
         }
-        // rays are grown even when hidden so the random sequence, and the bark after it, doesn't change
-        val rays = growRays(out, params.raySpacing)
-        return growBark(center, out, latewood, if (params.drawRays) rays else listOf(), maxR * barkThickness)
+        return growBark(center, out, latewood, growRays(out, params.raySpacing), maxR * barkThickness)
     }
 
     /**
@@ -357,8 +350,6 @@ class TreeCuts : ProcessingAppK() {
             '8' -> barkThickness = min(0.3f, barkThickness + 0.01f)
             '9' -> raySpacing = max(3f, raySpacing - 2f)
             '0' -> raySpacing = min(100f, raySpacing + 2f)
-            'r' -> drawRays = !drawRays
-            'e' -> drawEarlywood = !drawEarlywood
             else -> return
         }
         // draw() regrows on the next frame when a parameter changed

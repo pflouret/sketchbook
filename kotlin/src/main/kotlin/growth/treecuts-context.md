@@ -28,15 +28,13 @@ Current design (lines version is gone):
   (normalises, sorts, merges overlapping/wrapping cuts). Uncut ring = one closed-by-duplicate polyline.
 - `Tree` now holds `ringPaths` and `earlyPaths` (List<List<FloatArray>>) instead of the old `rays` lines;
   `draw()` just strokes those via `drawPath`. Bark still uses `drawRing`.
-- Rays are generated even when disabled (keeps the random sequence stable); `drawRays=false` passes no rays to
-  `cutRings`.
 
 ## Keys (in addition to ProcessingAppK's x/p/space/R/S/V/c)
-`1/2` eccentricity, `3/4` years, `5/6` taper, `7/8` bark thickness, `9/0` ray spacing, `r` toggle rays
-(regrows), `e` toggle earlywood.
+`1/2` eccentricity, `3/4` years, `5/6` taper, `7/8` bark thickness, `9/0` ray spacing. Rays and earlywood
+are always drawn (their toggles were removed).
 
 ## GUI (LazyGui)
-- Parameters are `LazyGuiControlDelegate` properties (sliders with ranges, toggles); the delegate gained optional
+- Parameters are `LazyGuiControlDelegate` properties (sliders with ranges); the delegate gained optional
   `min`/`max` args for `slider`/`sliderInt`. The sketch now loops (needed for the gui); `draw()` reads a `Params`
   snapshot each frame and regrows only when it differs from the last one (`reset()` forces a regrow).
 - Keys still work and just set the gui values.
