@@ -12,7 +12,7 @@ class TreeCuts : ProcessingAppK() {
     private val samples = 720
     private var years = 60
     private var barkThickness = 0.07f  // fraction of the trunk radius
-    private var eccentricity = 0.3f
+    private var eccentricity = 0.0f
     private var taper = 0.7f  // 1 = even ring widths, lower = wide young rings, narrow old ones
     private var drawEarlywood = true
     private var raySpacing = 14f  // px of circumference per ray
@@ -328,8 +328,8 @@ class TreeCuts : ProcessingAppK() {
         when (event.key) {
             '1' -> eccentricity = max(0f, eccentricity - 0.05f)
             '2' -> eccentricity += 0.05f
-            '3' -> years = max(5, years - 5)
-            '4' -> years += 5
+            '3' -> years = max(1, years - 1)
+            '4' -> years += 1
             '5' -> taper = max(0.2f, taper - 0.05f)
             '6' -> taper = min(1f, taper + 0.05f)
             '7' -> barkThickness = max(0.01f, barkThickness - 0.01f)
