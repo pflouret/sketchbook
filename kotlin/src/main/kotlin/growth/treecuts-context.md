@@ -40,6 +40,7 @@ Current design (lines version is gone):
   `min`/`max` args for `slider`/`sliderInt`. The sketch now loops (needed for the gui); `draw()` reads a `Params`
   snapshot each frame and regrows only when it differs from the last one (`reset()` forces a regrow).
 - Keys still work and just set the gui values.
+- `noise octaves` / `noise falloff` sliders feed `noiseDetail()`, applied in `regrow()` (was fixed at 4, 0.5 in setup).
 
 ## Constraints / conventions to keep in mind
 - Output must stay SVG-path friendly (plotter) — new CLAUDE.md rule.

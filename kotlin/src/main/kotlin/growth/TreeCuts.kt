@@ -11,21 +11,25 @@ import util.Size
 
 class TreeCuts : ProcessingAppK() {
     private val samples = 720
-    private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 200)
-    private var barkThickness: Float by LazyGuiControlDelegate("slider", "", 0.07f, 0.01f, 0.3f)  // fraction of the trunk radius
+    private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 100)
+    private var barkThickness: Float by LazyGuiControlDelegate("slider", "", 0.01f, 0.01f, 0.1f)  // fraction of the trunk radius
     private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
     private var taper: Float by LazyGuiControlDelegate("slider", "", 0.7f, 0.2f, 1f)  // 1 = even ring widths, lower = wide young rings, narrow old ones
     private var raySpacing: Float by LazyGuiControlDelegate("slider", "", 14f, 3f, 100f)  // px of circumference per ray
     private var drawRays: Boolean by LazyGuiControlDelegate("toggle", "", true)
     private var drawEarlywood: Boolean by LazyGuiControlDelegate("toggle", "", true)
+    private var noiseOctaves: Int by LazyGuiControlDelegate("sliderInt", "", 4, 1, 8)
+    private var noiseFalloff: Float by LazyGuiControlDelegate("slider", "", 0.5f, 0f, 1f)  // weight of each next octave
 
     /** The parameters that need a regrow, read from the gui once per frame. */
     private data class Params(
         val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
-        val raySpacing: Float, val drawRays: Boolean,
+        val raySpacing: Float, val drawRays: Boolean, val noiseOctaves: Int, val noiseFalloff: Float,
     )
 
-    private fun params() = Params(years, barkThickness, eccentricity, taper, raySpacing, drawRays)
+    private fun params() = Params(
+        years, barkThickness, eccentricity, taper, raySpacing, drawRays, noiseOctaves, noiseFalloff,
+    )
     private var grownWith: Params? = null
 
     /**
@@ -57,7 +61,6 @@ class TreeCuts : ProcessingAppK() {
 
     override fun setup() {
         super.setup()
-        noiseDetail(4, 0.5f)
         initGui()
         // the gui only draws and takes input while the sketch loops
         reset()
@@ -107,6 +110,7 @@ class TreeCuts : ProcessingAppK() {
 
     private fun regrow(params: Params) {
         resetSeed(false)
+        noiseDetail(params.noiseOctaves, params.noiseFalloff)
         tree = grow(params)
         grownWith = params
     }
