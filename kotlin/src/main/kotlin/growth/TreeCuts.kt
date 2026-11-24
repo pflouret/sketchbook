@@ -1,5 +1,6 @@
 package growth
 
+import gui.LazyGuiControlDelegate
 import p5.ProcessingAppK
 import processing.core.PApplet
 import processing.event.KeyEvent
@@ -10,13 +11,22 @@ import util.Size
 
 class TreeCuts : ProcessingAppK() {
     private val samples = 720
-    private var years = 60
-    private var barkThickness = 0.07f  // fraction of the trunk radius
-    private var eccentricity = 0.0f
-    private var taper = 0.7f  // 1 = even ring widths, lower = wide young rings, narrow old ones
-    private var drawEarlywood = true
-    private var raySpacing = 14f  // px of circumference per ray
-    private var drawRays = true
+    private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 200)
+    private var barkThickness: Float by LazyGuiControlDelegate("slider", "", 0.07f, 0.01f, 0.3f)  // fraction of the trunk radius
+    private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
+    private var taper: Float by LazyGuiControlDelegate("slider", "", 0.7f, 0.2f, 1f)  // 1 = even ring widths, lower = wide young rings, narrow old ones
+    private var raySpacing: Float by LazyGuiControlDelegate("slider", "", 14f, 3f, 100f)  // px of circumference per ray
+    private var drawRays: Boolean by LazyGuiControlDelegate("toggle", "", true)
+    private var drawEarlywood: Boolean by LazyGuiControlDelegate("toggle", "", true)
+
+    /** The parameters that need a regrow, read from the gui once per frame. */
+    private data class Params(
+        val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
+        val raySpacing: Float, val drawRays: Boolean,
+    )
+
+    private fun params() = Params(years, barkThickness, eccentricity, taper, raySpacing, drawRays)
+    private var grownWith: Params? = null
 
     /**
      * Everything draw() needs, swapped in whole. With noLoop() Processing handles key events on
@@ -48,15 +58,19 @@ class TreeCuts : ProcessingAppK() {
     override fun setup() {
         super.setup()
         noiseDetail(4, 0.5f)
-        noLoop()
+        initGui()
+        // the gui only draws and takes input while the sketch loops
         reset()
     }
 
     override fun draw() {
+        val params = params()
+        if (params != grownWith) regrow(params)
         background(255)
         noFill()
         val tree = tree
         val latewood = tree.latewood
+        val drawEarlywood = drawEarlywood
         for (i in 1 until tree.rings.size) {
             if (drawEarlywood) {
                 stroke(0f, 30f)
@@ -88,16 +102,17 @@ class TreeCuts : ProcessingAppK() {
 
     override fun reset() {
         resetSeed(true)
-        regrow()
+        grownWith = null  // regrow with the new seed on the next frame
     }
 
-    private fun regrow() {
+    private fun regrow(params: Params) {
         resetSeed(false)
-        tree = grow(years, barkThickness, eccentricity, taper)
-        redraw()
+        tree = grow(params)
+        grownWith = params
     }
 
-    private fun grow(years: Int, barkThickness: Float, eccentricity: Float, taper: Float): Tree {
+    private fun grow(params: Params): Tree {
+        val (years, barkThickness, eccentricity, taper) = params
         val center = PVector(w2 + random(-30, 30), h2 + random(-30, 30))
         val latewood = FloatArray(years + 1)
         val maxR = min(width, height) * 0.4f
@@ -127,7 +142,9 @@ class TreeCuts : ProcessingAppK() {
             }
             out.add(r)
         }
-        return growBark(center, out, latewood, growRays(out), maxR * barkThickness)
+        // rays are grown even when hidden so the random sequence, and the bark after it, doesn't change
+        val rays = growRays(out, params.raySpacing)
+        return growBark(center, out, latewood, if (params.drawRays) rays else listOf(), maxR * barkThickness)
     }
 
     /**
@@ -164,7 +181,7 @@ class TreeCuts : ProcessingAppK() {
             strokes[k * 4 + 2] = center.x + r1 * cos(a)
             strokes[k * 4 + 3] = center.y + r1 * sin(a)
         }
-        val (ringPaths, earlyPaths) = cutRings(center, rings, inner, if (drawRays) rays else listOf())
+        val (ringPaths, earlyPaths) = cutRings(center, rings, inner, rays)
         return Tree(center, rings, latewood, inner, outer, strokes, ringPaths, earlyPaths)
     }
 
@@ -174,7 +191,7 @@ class TreeCuts : ProcessingAppK() {
      * constant. A ray lives for a span of years, and within that span per-year noise decides how
      * strongly (if at all) it breaks that year's ring.
      */
-    private fun growRays(rings: List<FloatArray>): List<Ray> {
+    private fun growRays(rings: List<FloatArray>, raySpacing: Float): List<Ray> {
         val last = rings.size - 1
         val rays = mutableListOf<Ray>()
         var count = 0
@@ -327,21 +344,20 @@ class TreeCuts : ProcessingAppK() {
         super.keyTyped(event)
         when (event.key) {
             '1' -> eccentricity = max(0f, eccentricity - 0.05f)
-            '2' -> eccentricity += 0.05f
+            '2' -> eccentricity = min(1f, eccentricity + 0.05f)
             '3' -> years = max(1, years - 1)
-            '4' -> years += 1
+            '4' -> years = min(200, years + 1)
             '5' -> taper = max(0.2f, taper - 0.05f)
             '6' -> taper = min(1f, taper + 0.05f)
             '7' -> barkThickness = max(0.01f, barkThickness - 0.01f)
             '8' -> barkThickness = min(0.3f, barkThickness + 0.01f)
             '9' -> raySpacing = max(3f, raySpacing - 2f)
-            '0' -> raySpacing += 2f
+            '0' -> raySpacing = min(100f, raySpacing + 2f)
             'r' -> drawRays = !drawRays
             'e' -> drawEarlywood = !drawEarlywood
             else -> return
         }
-        println("ecc=%.2f years=$years taper=%.2f bark=%.2f rays=%.0f".format(eccentricity, taper, barkThickness, raySpacing))
-        regrow()
+        // draw() regrows on the next frame when a parameter changed
     }
 
     companion object {

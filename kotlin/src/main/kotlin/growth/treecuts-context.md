@@ -35,6 +35,12 @@ Current design (lines version is gone):
 `1/2` eccentricity, `3/4` years, `5/6` taper, `7/8` bark thickness, `9/0` ray spacing, `r` toggle rays
 (regrows), `e` toggle earlywood.
 
+## GUI (LazyGui)
+- Parameters are `LazyGuiControlDelegate` properties (sliders with ranges, toggles); the delegate gained optional
+  `min`/`max` args for `slider`/`sliderInt`. The sketch now loops (needed for the gui); `draw()` reads a `Params`
+  snapshot each frame and regrows only when it differs from the last one (`reset()` forces a regrow).
+- Keys still work and just set the gui values.
+
 ## Constraints / conventions to keep in mind
 - Output must stay SVG-path friendly (plotter) — new CLAUDE.md rule.
 - noLoop() + event thread: draw() reads only the immutable `Tree` snapshot swapped in by `regrow()`.
