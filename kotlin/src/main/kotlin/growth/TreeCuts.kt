@@ -10,7 +10,9 @@ import util.Size
 // Slop galore
 
 class TreeCuts : ProcessingAppK() {
-    private val samples = 720
+    private var ringSamples: Int by LazyGuiControlDelegate("sliderInt", "", 720, 10, 800)  // points per ring
+    /** Points per ring of the tree being grown; set from [ringSamples] in regrow(), on the draw thread. */
+    private var samples = 720
     private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 100)
     private var barkThickness: Float by LazyGuiControlDelegate("slider", "", 0.01f, 0.01f, 0.1f)  // fraction of the trunk radius
     private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
@@ -22,11 +24,11 @@ class TreeCuts : ProcessingAppK() {
     /** The parameters that need a regrow, read from the gui once per frame. */
     private data class Params(
         val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
-        val raySpacing: Float, val noiseOctaves: Int, val noiseFalloff: Float,
+        val raySpacing: Float, val noiseOctaves: Int, val noiseFalloff: Float, val samples: Int,
     )
 
     private fun params() = Params(
-        years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff,
+        years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff, ringSamples,
     )
     private var grownWith: Params? = null
 
@@ -106,6 +108,7 @@ class TreeCuts : ProcessingAppK() {
     private fun regrow(params: Params) {
         resetSeed(false)
         noiseDetail(params.noiseOctaves, params.noiseFalloff)
+        samples = params.samples
         tree = grow(params)
         grownWith = params
     }
@@ -331,8 +334,8 @@ class TreeCuts : ProcessingAppK() {
         FloatArray(samples) { lerp(a[it], b[it], t) }
 
     private fun drawRing(center: PVector, r: FloatArray) = withShape(CLOSE) {
-        for (j in 0 until samples) {
-            val a = TWO_PI * j / samples
+        for (j in r.indices) {
+            val a = TWO_PI * j / r.size
             vertex(center.x + r[j] * cos(a), center.y + r[j] * sin(a))
         }
     }
