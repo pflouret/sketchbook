@@ -10,7 +10,7 @@ import util.Size
 // Slop galore
 
 class TreeCuts : ProcessingAppK() {
-    private var ringSamples: Int by LazyGuiControlDelegate("sliderInt", "", 720, 10, 800)  // points per ring
+    private var ringSamples: Int by LazyGuiControlDelegate("sliderInt", "", 400, 10, 800)  // points per ring
     /** Points per ring of the tree being grown; set from [ringSamples] in regrow(), on the draw thread. */
     private var samples = 720
     private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 100)
@@ -38,21 +38,19 @@ class TreeCuts : ProcessingAppK() {
      */
     private class Tree(
         val center: PVector,
-        val rings: List<FloatArray>,
-        val latewood: FloatArray,  // per-year darkness of the ring boundary, 0..1
+        val rings: List<RingLines>,  // the separate stems' rings, then the shared ones
         val innerBark: FloatArray,
         val outerBark: FloatArray,
         val barkStrokes: FloatArray,  // x0, y0, x1, y1 per stroke
-        val ringPaths: List<List<FloatArray>>,  // per year, the ring line as open x, y polylines
-        val earlyPaths: List<List<FloatArray>>,  // per year, the faint earlywood lines
     )
+
+    /** One year's ring, ready to stroke: open x, y polylines for the ring and its faint earlywood lines. */
+    private class RingLines(val latewood: Float, val lines: List<FloatArray>, val early: List<FloatArray>)
 
     /** A medullary ray, active from year [start] to [end]. [id] keys its per-year noise. */
     private class Ray(val angle: Float, val start: Int, val end: Int, val id: Float)
 
-    @Volatile private var tree = Tree(
-        PVector(), listOf(), floatArrayOf(), floatArrayOf(), floatArrayOf(), floatArrayOf(), listOf(), listOf(),
-    )
+    @Volatile private var tree = Tree(PVector(), listOf(), floatArrayOf(), floatArrayOf(), floatArrayOf())
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -72,20 +70,19 @@ class TreeCuts : ProcessingAppK() {
         background(255)
         noFill()
         val tree = tree
-        val latewood = tree.latewood
-        for (i in 1 until tree.rings.size) {
+        for (ring in tree.rings) {
             stroke(0f, 30f)
             strokeWeight(0.5f)
-            tree.earlyPaths[i].forEach(::drawPath)
-            stroke(0f, 90f + 140f * latewood[i])
-            strokeWeight(0.6f + 1.4f * latewood[i])
-            tree.ringPaths[i].forEach(::drawPath)
+            ring.early.forEach(::drawPath)
+            stroke(0f, 90f + 140f * ring.latewood)
+            strokeWeight(0.6f + 1.4f * ring.latewood)
+            ring.lines.forEach(::drawPath)
         }
         drawBark(tree)
     }
 
     private fun drawBark(tree: Tree) {
-        if (tree.rings.isEmpty()) return
+        if (tree.innerBark.isEmpty()) return
         stroke(60f, 35f, 15f, 160f)
         strokeWeight(1f)
         drawRing(tree.center, tree.innerBark)
@@ -116,45 +113,168 @@ class TreeCuts : ProcessingAppK() {
     private fun grow(params: Params): Tree {
         val (years, barkThickness, eccentricity, taper) = params
         val center = PVector(w2 + random(-30, 30), h2 + random(-30, 30))
+        val piths = (1 + random(3).toInt()).let { if (years < 4) 1 else it }
         val latewood = FloatArray(years + 1)
         val maxR = min(width, height) * 0.4f
-        val widths = yearWidths(maxR * (1 - barkThickness), years, taper, latewood)
-        val minGap = 0.6f
+        var widths = yearWidths(maxR * (1 - barkThickness), years, taper, latewood)
         val lean0 = random(TWO_PI)
-        var r = FloatArray(samples) { 1.5f }
-        val out = mutableListOf(r)
+        val lines = mutableListOf<RingLines>()
 
-        for (i in 0 until years) {
-            val w = widths[i]
-            val roughness = 0.25f * w
+        var first = FloatArray(samples) { 1.5f }
+        var stemYears = 0  // years the stems grew apart before sharing rings
+        if (piths > 1) {
+            // The stems start apart, so they get a head start on the trunk radius; every year is
+            // narrowed a bit to make up for it and keep the trunk inside maxR.
+            val target = max(1, (years * random(0.15f, 0.35f)).toInt())
+            val headStart = widths.take(target).sum()
+            val k = widths.sum() / (widths.sum() + headStart)
+            widths = FloatArray(years) { widths[it] * k }
+            val spread = random(TWO_PI)
+            val centers = List(piths) { p ->
+                val a = spread + TWO_PI * p / piths + random(-0.3f, 0.3f)
+                val d = headStart * k * random(0.85f, 1.15f)
+                PVector(center.x + d * cos(a), center.y + d * sin(a))
+            }
+            val stems = centers.map { mutableListOf(FloatArray(samples) { 1.5f }) }
+            while (stemYears < years - 1 && !grownTogether(centers, stems.map { it.last() })) {
+                val i = stemYears
+                for (p in 0 until piths) {
+                    // each stem leans away from the others
+                    val out = atan2(centers[p].y - center.y, centers[p].x - center.x)
+                    val lean = out + 1.5f * (noise(4000 + 50f * (p + 1) + i * 0.04f) - 0.5f)
+                    stems[p].add(growRing(stems[p].last(), i, widths[i], eccentricity, lean, 100f * (p + 1)))
+                }
+                stemYears++
+            }
+            for (p in 0 until piths) {
+                val stem = stems[p]
+                val last = stem.last()
+                val outside = FloatArray(samples) { last[it] + 0.5f * widths[max(0, stemYears - 1)] }
+                val rays = growRays(stem, params.raySpacing, 20000f + 5000f * p)
+                lines += cutRings(centers[p], stem, outside, rays, 0, latewood) { k ->
+                    // where two stems press together, the ring of one stops at the other's
+                    overlapCuts(centers[p], stem[k], (0 until piths).filter { it != p }.map { centers[it] to stems[it][k] })
+                }
+            }
+            first = envelope(center, centers, stems.map { it.last() })
+        }
+
+        val rings = mutableListOf(first)
+        for (i in stemYears until years) {
             // slow drift of the lean direction over the tree's life
             val lean = lean0 + 3f * (noise(4000 + i * 0.04f) - 0.5f)
-
-            val old = r
-            val prev = smooth(old, 3)
-            r = FloatArray(samples) { j ->
-                val a = TWO_PI * j / samples
-                val ca = cos(a)
-                val sa = sin(a)
-                // noise is sampled on a circle so there's no seam at angle 0; z = time
-                val lobes = 0.4f + 1.2f * noise(5 + ca * 1.2f, 5 + sa * 1.2f, i * 0.06f)
-                val ecc = 1 + eccentricity * cos(a - lean)
-                val wobble = noise(50 + ca * 8f, 50 + sa * 8f, i * 0.3f) - 0.5f
-                max(prev[j] + w * ecc * lobes + roughness * wobble, old[j] + minGap)
-            }
-            out.add(r)
+            rings.add(growRing(rings.last(), i, widths[i], eccentricity, lean, 0f))
         }
-        return growBark(center, out, latewood, growRays(out, params.raySpacing), maxR * barkThickness)
+        val rays = growRays(rings, params.raySpacing, 6000f)
+        val (inner, outer, strokes) = growBark(center, rings.last(), maxR * barkThickness)
+        lines += cutRings(center, rings, inner, rays, stemYears, latewood)
+        return Tree(center, lines, inner, outer, strokes)
+    }
+
+    /** Year [i]'s ring grown out of [old]. [off] shifts the noise so separate stems grow differently. */
+    private fun growRing(old: FloatArray, i: Int, w: Float, eccentricity: Float, lean: Float, off: Float): FloatArray {
+        val minGap = 0.6f
+        val roughness = random() * w
+        val prev = smooth(old, 3)
+        return FloatArray(samples) { j ->
+            val a = TWO_PI * j / samples
+            val ca = cos(a)
+            val sa = sin(a)
+            // noise is sampled on a circle so there's no seam at angle 0; z = time
+            val lobes = 0.4f + 1.2f * noise(5 + off + ca * 1.2f, 5 + sa * 1.2f, i * 0.06f)
+            val ecc = 1 + eccentricity * cos(a - lean)
+            val wobble = noise(50 + off + ca * 8f, 50 + sa * 8f, i * 0.3f) - 0.5f
+            max(prev[j] + w * ecc * lobes + roughness * wobble, old[j] + minGap)
+        }
+    }
+
+    /** Whether the stems' rings have met into one connected group. */
+    private fun grownTogether(centers: List<PVector>, rings: List<FloatArray>): Boolean {
+        val group = mutableSetOf(0)
+        var grew = true
+        while (grew) {
+            grew = false
+            for (a in group.toList()) for (b in centers.indices) {
+                if (b in group) continue
+                val ang = atan2(centers[b].y - centers[a].y, centers[b].x - centers[a].x)
+                val d = PVector.dist(centers[a], centers[b])
+                if (ringAt(rings[a], ang) + ringAt(rings[b], ang + PI) >= d) {
+                    group.add(b)
+                    grew = true
+                }
+            }
+        }
+        return group.size == centers.size
+    }
+
+    /**
+     * The stems' outline as a ring around [c]: in each direction, the farthest point where the
+     * direction leaves a stem. Directions that miss every stem (a gap between them) are bridged by
+     * interpolating the neighbouring directions.
+     */
+    private fun envelope(c: PVector, centers: List<PVector>, rings: List<FloatArray>): FloatArray {
+        val env = FloatArray(samples) { -1f }
+        val step = TWO_PI / samples
+        fun span(x0: Float, y0: Float, x1: Float, y1: Float) {
+            var a0 = atan2(y0, x0)
+            var d0 = mag(x0, y0)
+            var d1 = mag(x1, y1)
+            var da = (atan2(y1, x1) - a0 + PI).mod(TWO_PI) - PI
+            if (da < 0) {
+                a0 += da; da = -da
+                d0 = d1.also { d1 = d0 }
+            }
+            if (da == 0f) return
+            var m = ceil(a0 / step)
+            while (m * step <= a0 + da) {
+                val j = m.mod(samples)
+                env[j] = max(env[j], lerp(d0, d1, (m * step - a0) / da))
+                m++
+            }
+        }
+        for ((q, r) in centers.zip(rings)) {
+            var px = 0f
+            var py = 0f
+            for (j in 0..samples) {
+                val a = j * step
+                val x = q.x + r[j % samples] * cos(a) - c.x
+                val y = q.y + r[j % samples] * sin(a) - c.y
+                if (j > 0) span(px, py, x, y)
+                px = x; py = y
+            }
+        }
+        val covered = env.indices.filter { env[it] >= 0 }
+        if (covered.isEmpty()) return FloatArray(samples) { 1.5f }
+        for (n in covered.indices) {
+            val a = covered[n]
+            val b = if (n + 1 < covered.size) covered[n + 1] else covered[0] + samples
+            for (j in a + 1 until b) env[j.mod(samples)] = lerp(env[a], env[b.mod(samples)], (j - a).toFloat() / (b - a))
+        }
+        return env
+    }
+
+    /** Angular intervals of the ring [r] around [q] that fall inside any of the [others]' rings. */
+    private fun overlapCuts(q: PVector, r: FloatArray, others: List<Pair<PVector, FloatArray>>): List<Pair<Float, Float>> {
+        val step = TWO_PI / samples
+        val cuts = mutableListOf<Pair<Float, Float>>()
+        for (j in 0 until samples) {
+            val a = j * step
+            val x = q.x + r[j] * cos(a)
+            val y = q.y + r[j] * sin(a)
+            val inside = others.any { (o, ro) ->
+                dist(x, y, o.x, o.y) < ringAt(ro, atan2(y - o.y, x - o.x))
+            }
+            // a bit over half a step either side, so neighbouring cuts overlap and merge
+            if (inside) cuts.add(a - 0.6f * step to a + 0.6f * step)
+        }
+        return cuts
     }
 
     /**
      * A thin pale inner bark right outside the last ring, then a thick outer bark whose thickness
      * comes from |2n - 1| noise: wide plateaus with sharp V-shaped fissures where n crosses 0.5.
      */
-    private fun growBark(
-        center: PVector, rings: List<FloatArray>, latewood: FloatArray, rays: List<Ray>, thickness: Float,
-    ): Tree {
-        val cambium = rings.last()
+    private fun growBark(center: PVector, cambium: FloatArray, thickness: Float): Triple<FloatArray, FloatArray, FloatArray> {
         val inner = FloatArray(samples) { j ->
             val a = TWO_PI * j / samples
             cambium[j] + thickness * (0.12f + 0.1f * noise(100 + cos(a) * 3f, 100 + sin(a) * 3f))
@@ -181,8 +301,7 @@ class TreeCuts : ProcessingAppK() {
             strokes[k * 4 + 2] = center.x + r1 * cos(a)
             strokes[k * 4 + 3] = center.y + r1 * sin(a)
         }
-        val (ringPaths, earlyPaths) = cutRings(center, rings, inner, rays)
-        return Tree(center, rings, latewood, inner, outer, strokes, ringPaths, earlyPaths)
+        return Triple(inner, outer, strokes)
     }
 
     /**
@@ -191,7 +310,7 @@ class TreeCuts : ProcessingAppK() {
      * constant. A ray lives for a span of years, and within that span per-year noise decides how
      * strongly (if at all) it breaks that year's ring.
      */
-    private fun growRays(rings: List<FloatArray>, raySpacing: Float): List<Ray> {
+    private fun growRays(rings: List<FloatArray>, raySpacing: Float, idBase: Float): List<Ray> {
         val last = rings.size - 1
         val rays = mutableListOf<Ray>()
         var count = 0
@@ -199,7 +318,7 @@ class TreeCuts : ProcessingAppK() {
             val target = (TWO_PI * rings[start].average().toFloat() / raySpacing).toInt()
             repeat(target - count) {
                 val end = if (prob(0.5f)) last else min(last, start + 3 + random(last - start).toInt())
-                rays.add(Ray(random(TWO_PI), start, end, 6000 + rays.size * 7.3f))
+                rays.add(Ray(random(TWO_PI), start, end, idBase + rays.size * 7.3f))
             }
             count = max(count, target)
         }
@@ -214,16 +333,18 @@ class TreeCuts : ProcessingAppK() {
     /**
      * Applies the rays to every ring: the line is cut where the ray passes, and on each side of the
      * cut the ring bulges outward by a different amount, so the two ends don't line up. Bulges are
-     * clamped to under half the gap to the next ring, so rings still never cross. Returns the ring
-     * and earlywood lines as open polylines, ready for SVG export.
+     * clamped to under half the gap to the next ring ([outside] for the last one), so rings still
+     * never cross. Ring k is year [firstYear] + k; ring 0 is where growth started and isn't drawn.
+     * [extraCuts] leaves out more of ring k. Returns open polylines, ready for SVG export.
      */
     private fun cutRings(
-        center: PVector, rings: List<FloatArray>, innerBark: FloatArray, rays: List<Ray>,
-    ): Pair<List<List<FloatArray>>, List<List<FloatArray>>> {
+        center: PVector, rings: List<FloatArray>, outside: FloatArray, rays: List<Ray>,
+        firstYear: Int, latewood: FloatArray, extraCuts: (Int) -> List<Pair<Float, Float>> = { listOf() },
+    ): List<RingLines> {
         val last = rings.size - 1
         val bent = rings.mapIndexed { k, ring ->
             if (k == 0) return@mapIndexed ring
-            val next = if (k < last) rings[k + 1] else innerBark
+            val next = if (k < last) rings[k + 1] else outside
             val meanR = ring.average().toFloat()
             val disp = FloatArray(samples)
             for (ray in rays) {
@@ -249,15 +370,16 @@ class TreeCuts : ProcessingAppK() {
             rays.mapNotNull { ray ->
                 val st = rayStrength(ray, k)
                 if (st <= 0f) null else (0.6f + 1.2f * st) / meanR to ray
-            }.map { (hw, ray) -> ray.angle - hw to ray.angle + hw }
+            }.map { (hw, ray) -> ray.angle - hw to ray.angle + hw } + if (k == 0) listOf() else extraCuts(k)
         }
-        val ringPaths = (0..last).map { k -> if (k == 0) listOf() else ringPolylines(center, bent[k], cuts[k]) }
-        // faint lines inside the year, interpolated so they can't cross the ring lines
-        val earlyPaths = (0..last).map { k ->
-            if (k == 0) listOf()
-            else floatArrayOf(0.35f, 0.7f).flatMap { ringPolylines(center, lerpRing(bent[k - 1], bent[k], it), cuts[k]) }
+        return (1..last).map { k ->
+            RingLines(
+                latewood[firstYear + k],
+                ringPolylines(center, bent[k], cuts[k]),
+                // faint lines inside the year, interpolated so they can't cross the ring lines
+                floatArrayOf(0.35f, 0.7f).flatMap { ringPolylines(center, lerpRing(bent[k - 1], bent[k], it), cuts[k]) },
+            )
         }
-        return ringPaths to earlyPaths
     }
 
     /** A ring as open polylines, with the angular intervals in [cuts] left out. */

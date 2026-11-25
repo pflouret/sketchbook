@@ -29,6 +29,17 @@ Current design (lines version is gone):
 - `Tree` now holds `ringPaths` and `earlyPaths` (List<List<FloatArray>>) instead of the old `rays` lines;
   `draw()` just strokes those via `drawPath`. Bark still uses `drawRing`.
 
+## Multiple piths (1-3, random per seed)
+- `grow()`: for 2-3 piths, stems start around the centre (distance = the head start of a random 15-35% of the
+  years; all widths scaled by R/(R+headStart) to stay inside maxR), each grows its own polar rings (`growRing`,
+  noise offset per stem, leaning away from the centre) until `grownTogether` says all touch (connected).
+- `envelope()`: outline of the stems as a polar ring around the centre (farthest exit per direction; directions
+  that miss every stem are interpolated, which leaves a straight-edged gap/inclusion between some stems). That is
+  ring 0 of the shared rings, which continue for the remaining years.
+- `overlapCuts`: a stem's ring is cut where it runs into another stem's ring of the same year.
+- `Tree.rings` is now a flat `List<RingLines(latewood, lines, early)>`; `cutRings` takes the year offset.
+- Adding the pith-count `random()` call changed the random sequence, so old seeds give different trees.
+
 ## Keys (in addition to ProcessingAppK's x/p/space/R/S/V/c)
 `1/2` eccentricity, `3/4` years, `5/6` taper, `7/8` bark thickness, `9/0` ray spacing. Rays and earlywood
 are always drawn (their toggles were removed).
