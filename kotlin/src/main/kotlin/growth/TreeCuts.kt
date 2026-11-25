@@ -39,12 +39,18 @@ class TreeCuts : ProcessingAppK() {
      * the window thread, so draw() can run while a regrow is changing the parameters.
      */
     private class Tree(
-        val center: PVector,
         val rings: List<RingLines>,  // the separate stems' rings, then the shared ones
-        val innerBark: FloatArray,
-        val outerBark: FloatArray,
-        val barkStrokes: FloatArray,  // x0, y0, x1, y1 per stroke
+        val innerBark: List<FloatArray>,  // open x, y polylines, like everything below
+        val outerBark: List<FloatArray>,
+        val barkStrokes: List<FloatArray>,
+        val cracks: List<FloatArray>,
     )
+
+    /**
+     * A drying crack: a wedge from radius [r0] around [center] out through the bark at [r1], opening
+     * to [width] px either side of a wandering centre line at [angle]. [id] keys its noise.
+     */
+    private class Crack(val center: PVector, val angle: Float, val r0: Float, val r1: Float, val width: Float, val wander: Float, val id: Float)
 
     /** One year's ring, ready to stroke: open x, y polylines for the ring and its faint earlywood lines. */
     private class RingLines(val latewood: Float, val lines: List<FloatArray>, val early: List<FloatArray>)
@@ -52,7 +58,7 @@ class TreeCuts : ProcessingAppK() {
     /** A medullary ray, active from year [start] to [end]. [id] keys its per-year noise. */
     private class Ray(val angle: Float, val start: Int, val end: Int, val id: Float)
 
-    @Volatile private var tree = Tree(PVector(), listOf(), floatArrayOf(), floatArrayOf(), floatArrayOf())
+    @Volatile private var tree = Tree(listOf(), listOf(), listOf(), listOf(), listOf())
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -81,22 +87,24 @@ class TreeCuts : ProcessingAppK() {
             ring.lines.forEach(::drawPath)
         }
         drawBark(tree)
+        stroke(20f, 200f)
+        strokeWeight(1f)
+        tree.cracks.forEach(::drawPath)
     }
 
     private fun drawBark(tree: Tree) {
         if (tree.innerBark.isEmpty()) return
         stroke(60f, 35f, 15f, 160f)
         strokeWeight(1f)
-        drawRing(tree.center, tree.innerBark)
+        tree.innerBark.forEach(::drawPath)
 
         stroke(45f, 25f, 10f, 190f)
         strokeWeight(1.1f)
-        val s = tree.barkStrokes
-        for (k in s.indices step 4) line(s[k], s[k + 1], s[k + 2], s[k + 3])
+        tree.barkStrokes.forEach(::drawPath)
 
         stroke(30f, 15f, 5f)
         strokeWeight(2.2f)
-        drawRing(tree.center, tree.outerBark)
+        tree.outerBark.forEach(::drawPath)
     }
 
     override fun reset() {
@@ -170,7 +178,15 @@ class TreeCuts : ProcessingAppK() {
         val rays = growRays(rings, params.raySpacing, 6000f)
         val (inner, outer, strokes) = growBark(center, rings.last(), maxR * barkThickness)
         lines += cutRings(center, rings, inner, rays, stemYears, latewood)
-        return Tree(center, lines, inner, outer, strokes)
+        val cracks = growCracks(center, rings.last().average().toFloat(), outer, maxR)
+        fun clip(paths: List<FloatArray>) = paths.flatMap { clipToCracks(it, cracks) }
+        return Tree(
+            lines.map { RingLines(it.latewood, clip(it.lines), clip(it.early)) },
+            clip(ringPolylines(center, inner, listOf())),
+            clip(ringPolylines(center, outer, listOf())),
+            clip(strokes.indices.step(4).map { strokes.copyOfRange(it, it + 4) }),
+            cracks.map { crackOutline(it, outer) },
+        )
     }
 
     /** Year [i]'s ring grown out of [old]. [off] shifts the noise so separate stems grow differently. */
@@ -438,6 +454,118 @@ class TreeCuts : ProcessingAppK() {
     }
 
     /**
+     * 0 to 3 drying cracks, mostly 0 or 1, spread around the trunk. Drawn last from the random
+     * sequence, so they don't change the rest of the tree.
+     */
+    private fun growCracks(center: PVector, trunkR: Float, outerBark: FloatArray, maxR: Float): List<Crack> {
+        val u = random(1f)
+        val count = when {
+            u < 0.35f -> 0
+            u < 0.75f -> 1
+            u < 0.95f -> 2
+            else -> 3
+        }
+        val scale = maxR / 400f  // crack sizes were picked on a 400px-radius trunk
+        val cracks = mutableListOf<Crack>()
+        repeat(count) { n ->
+            var angle = random(TWO_PI)
+            // a few tries to keep cracks apart
+            for (t in 0 until 10) {
+                if (cracks.none { abs((it.angle - angle + PI).mod(TWO_PI) - PI) < 0.6f }) break
+                angle = random(TWO_PI)
+            }
+            val r1 = outerBark.max() + 2f
+            cracks.add(Crack(center, angle, trunkR * random(0.05f, 0.35f), r1, random(3f, 9f) * scale, 20f * scale, 7000f + 31f * n))
+        }
+        return cracks
+    }
+
+    /** Sideways offset (px) of the crack's centre line at radius [r]: a slow wander plus a fine zigzag. */
+    private fun crackSide(c: Crack, r: Float) =
+        c.wander * (noise(c.id, r * 0.02f) - 0.5f) + 0.25f * c.wander * (noise(c.id + 9, r * 0.3f) - 0.5f)
+
+    /** Half the crack's opening at radius [r]: zero at the tip, widest at the bark. */
+    private fun crackHalfWidth(c: Crack, r: Float) =
+        if (r <= c.r0) 0f else c.width * pow(min(1f, (r - c.r0) / (c.r1 - c.r0)), 1.5f)
+
+    private fun inCrack(c: Crack, x: Float, y: Float): Boolean {
+        val dx = x - c.center.x
+        val dy = y - c.center.y
+        val r = mag(dx, dy)
+        if (r <= c.r0 || r > c.r1) return false
+        val side = r * ((atan2(dy, dx) - c.angle + PI).mod(TWO_PI) - PI)  // px along the arc
+        if (abs(side) > c.width + c.wander) return false  // cheap reject before the noise
+        return abs(side - crackSide(c, r)) < crackHalfWidth(c, r)
+    }
+
+    /**
+     * Polyline [p] with the parts inside any crack removed. Crossings are found by bisection, so the
+     * pieces end right on the crack's edge lines. A closed polyline cut once stays one piece.
+     */
+    private fun clipToCracks(p: FloatArray, cracks: List<Crack>): List<FloatArray> {
+        if (cracks.isEmpty() || p.size < 4) return listOf(p)
+        fun inside(x: Float, y: Float) = cracks.any { inCrack(it, x, y) }
+        val out = mutableListOf<MutableList<Float>>()
+        var cur = mutableListOf<Float>()
+        var px = p[0]
+        var py = p[1]
+        var pin = inside(px, py)
+        if (!pin) { cur.add(px); cur.add(py) }
+        for (k in 2 until p.size step 2) {
+            val x = p[k]
+            val y = p[k + 1]
+            val inn = inside(x, y)
+            if (inn != pin) {
+                var ax = px; var ay = py; var bx = x; var by = y
+                repeat(12) {
+                    val mx = (ax + bx) / 2
+                    val my = (ay + by) / 2
+                    if (inside(mx, my) == pin) { ax = mx; ay = my } else { bx = mx; by = my }
+                }
+                val ex = (ax + bx) / 2
+                val ey = (ay + by) / 2
+                if (pin) {
+                    cur = mutableListOf(ex, ey)
+                } else {
+                    cur.add(ex); cur.add(ey)
+                    out.add(cur)
+                    cur = mutableListOf()
+                }
+            }
+            if (!inn) { cur.add(x); cur.add(y) }
+            px = x; py = y; pin = inn
+        }
+        if (cur.isNotEmpty()) out.add(cur)
+        val closed = p[0] == p[p.size - 2] && p[1] == p[p.size - 1]
+        if (closed && out.size > 1 && !inside(p[0], p[1])) {
+            // the first and last pieces meet at the seam: join them
+            val last = out.removeAt(out.size - 1)
+            out[0] = (last.dropLast(2) + out[0]).toMutableList()
+        }
+        return out.filter { it.size >= 4 }.map { it.toFloatArray() }
+    }
+
+    /** The crack's two edges as one V-shaped open polyline, from the bark in to the tip and back out. */
+    private fun crackOutline(c: Crack, outerBark: FloatArray): FloatArray {
+        fun edge(sign: Float): List<Float> {
+            val pts = mutableListOf<Float>()
+            var r = c.r0
+            while (true) {
+                val a = c.angle + (crackSide(c, r) + sign * crackHalfWidth(c, r)) / r
+                pts.add(c.center.x + r * cos(a)); pts.add(c.center.y + r * sin(a))
+                if (r >= ringAt(outerBark, a) || r >= c.r1) break
+                r = min(r + 1.5f, c.r1)
+            }
+            return pts
+        }
+        val left = edge(-1f)
+        val right = edge(1f)
+        // left edge from the bark in to the tip, then the right edge back out (tip shared once)
+        val l = left.chunked(2).reversed().flatten()
+        return (l + right.drop(2)).toFloatArray()
+    }
+
+    /**
      * Mean ring width per year: age taper times a "climate", scaled to maxR. Climate, droughts and
      * latewood darkness all come from 1D Perlin noise over time, so neighbouring years are
      * correlated (good runs, bad runs) and a drought ramps in and recovers over a couple of years.
@@ -462,13 +590,6 @@ class TreeCuts : ProcessingAppK() {
 
     private fun lerpRing(a: FloatArray, b: FloatArray, t: Float) =
         FloatArray(samples) { lerp(a[it], b[it], t) }
-
-    private fun drawRing(center: PVector, r: FloatArray) = withShape(CLOSE) {
-        for (j in r.indices) {
-            val a = TWO_PI * j / r.size
-            vertex(center.x + r[j] * cos(a), center.y + r[j] * sin(a))
-        }
-    }
 
     override fun keyTyped(event: KeyEvent) {
         super.keyTyped(event)

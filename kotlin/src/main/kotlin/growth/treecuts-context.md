@@ -44,6 +44,16 @@ The user commits themselves; don't commit unless asked.
 - `Tree(center, rings: List<RingLines(latewood, lines, early)>, innerBark, outerBark, barkStrokes)`.
 - The pith-count `random()` call changed the random sequence: seeds from before it give different trees.
 
+## Drying cracks (`growCracks`, last in the random sequence)
+- 0–3 per tree (35% none, 40% one, 20% two, 5% three), kept ≥0.6 rad apart. Each is a wedge around the
+  trunk centre from `r0 = trunkR * random(0.05, 0.35)` out through the bark; half-width at the bark
+  `random(3, 9) * maxR/400` px with `pow(t, 1.5)` taper; centre line wanders by noise (`crackSide`,
+  `wander = 20 * maxR/400` px plus a fine zigzag).
+- `clipToCracks` removes the inside parts of every ring, earlywood, bark line and bark stroke, bisecting
+  crossings so pieces end exactly on the edges (closed rings cut once stay one piece). `crackOutline` draws
+  the two edges as one V-shaped open polyline. `Tree` now holds bark/strokes/cracks as polyline lists (no
+  `center`; `drawRing` was removed).
+
 ## GUI (LazyGui)
 - `LazyGuiControlDelegate` properties; the delegate gained optional `min`/`max` for `slider`/`sliderInt`.
 - Sliders: diameter (0.1–1 of the canvas's shorter side, default 0.8; sets `maxR`), years, bark thickness, eccentricity, taper, ray spacing, noise octaves (1–8), noise falloff
