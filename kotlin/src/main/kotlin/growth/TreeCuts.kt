@@ -174,9 +174,14 @@ class TreeCuts : ProcessingAppK() {
     /** Year [i]'s ring grown out of [old]. [off] shifts the noise so separate stems grow differently. */
     private fun growRing(old: FloatArray, i: Int, w: Float, eccentricity: Float, lean: Float, off: Float): FloatArray {
         val minGap = 0.6f
-        val roughness = random() * w
-        val prev = smooth(old, 3)
-        return FloatArray(samples) { j ->
+        val meanR = old.average().toFloat()
+        // the wobble is sized in px, so on a small young ring it's large next to the circumference;
+        // scale it down until the ring's radius is about 80px
+        val roughness = random() * w * constrain(meanR / 80f, 0.1f, 1f)
+        // smoothing window of ~8px of arc: a few samples on old rings, a wide angle on young ones
+        val k = constrain((8f / (TWO_PI * max(meanR, 1f) / samples)).toInt(), 3, samples / 8)
+        val prev = smooth(old, k)
+        val grown = smooth(FloatArray(samples) { j ->
             val a = TWO_PI * j / samples
             val ca = cos(a)
             val sa = sin(a)
@@ -184,8 +189,9 @@ class TreeCuts : ProcessingAppK() {
             val lobes = 0.4f + 1.2f * noise(5 + off + ca * 1.2f, 5 + sa * 1.2f, i * 0.06f)
             val ecc = 1 + eccentricity * cos(a - lean)
             val wobble = noise(50 + off + ca * 8f, 50 + sa * 8f, i * 0.3f) - 0.5f
-            max(prev[j] + w * ecc * lobes + roughness * wobble, old[j] + minGap)
-        }
+            prev[j] + w * ecc * lobes + roughness * wobble
+        }, k)
+        return FloatArray(samples) { j -> max(grown[j], old[j] + minGap) }
     }
 
     /** Whether the stems' rings have met into one connected group. */
@@ -351,7 +357,7 @@ class TreeCuts : ProcessingAppK() {
                 val st = rayStrength(ray, k)
                 if (st <= 0f) continue
                 val reach = (3f + 8f * st) / meanR
-                val amp = 3f * st
+                val amp = 3f * st * constrain(meanR / 80f, 0.1f, 1f)  // gentler on small young rings
                 val skew = 2 * noise(ray.id + 50, k * 0.7f) - 1  // which side lifts more
                 val j0 = ((ray.angle - reach) / TWO_PI * samples).toInt() - 1
                 val j1 = ((ray.angle + reach) / TWO_PI * samples).toInt() + 1
