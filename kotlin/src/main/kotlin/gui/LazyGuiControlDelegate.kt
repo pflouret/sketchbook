@@ -14,6 +14,8 @@ class LazyGuiControlDelegate<T>(
     private val controlType: String,
     folder: String = "",
     private val defaultValue: Any? = null,
+    private val min: Any? = null,  // slider/sliderInt range, needs defaultValue and max too
+    private val max: Any? = null,
 ) : ReadWriteProperty<Any, T> {
     companion object {
         private val gui by lazy { GlobalReferences.gui }
@@ -58,9 +60,13 @@ class LazyGuiControlDelegate<T>(
         if (defaultValue != null) {
             when (controlType) {
                 "numberText" -> gui.text(controlPath(), defaultValue.toString())
-                else ->
+                else -> if (min != null && max != null) {
                     LazyGui::class.members
-                        .find(this::matchingDefaultValueMethod)!!
+                        .find { matchingDefaultValueMethod(it, 5) }!!
+                        .call(gui, controlPath(), defaultValue, min, max)
+                } else
+                    LazyGui::class.members
+                        .find { matchingDefaultValueMethod(it, 3) }!!
                         .call(gui, controlPath(), defaultValue)
             }
         }
@@ -83,9 +89,9 @@ class LazyGuiControlDelegate<T>(
         }
     }
 
-    private fun matchingDefaultValueMethod(method: KCallable<*>): Boolean =
+    private fun matchingDefaultValueMethod(method: KCallable<*>, arity: Int): Boolean =
         method.name == controlType
-                && method.parameters.size == 3
+                && method.parameters.size == arity
                 && (method.parameters[2].type.javaType as Class<*>).simpleName ==
                 defaultValue!!::class.java.simpleName.let {
                     KOT_TO_JVM_SIMPLE_NAME.getOrDefault(it, it)
