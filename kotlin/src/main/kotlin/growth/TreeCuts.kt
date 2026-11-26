@@ -13,7 +13,7 @@ class TreeCuts : ProcessingAppK() {
     private var ringSamples: Int by LazyGuiControlDelegate("sliderInt", "", 400, 10, 800)  // points per ring
     /** Points per ring of the tree being grown; set from [ringSamples] in regrow(), on the draw thread. */
     private var samples = 720
-    private var diameter: Float by LazyGuiControlDelegate("slider", "", 0.8f, 0.1f, 1f)  // trunk size, fraction of the canvas's shorter side
+    private var diameter: Float by LazyGuiControlDelegate("slider", "", 0.99f, 0.1f, 2f)  // trunk size, fraction of the canvas's shorter side
     private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 100)
     private var barkThickness: Float by LazyGuiControlDelegate("slider", "", 0.01f, 0.01f, 0.1f)  // fraction of the trunk radius
     private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
@@ -485,7 +485,9 @@ class TreeCuts : ProcessingAppK() {
                     val t = (next - travelled) / seg
                     val x = p[k - 2] + dx * t
                     val y = p[k - 1] + dy * t
-                    val l = length * random(0.6f, 1f)
+                    // length from 2D noise over the canvas, so neighbouring ticks (across rings too)
+                    // are similar: patches of long ticks fading into short ones
+                    val l = length * constrain(map(noise(8000 + x * 0.015f, 8000 + y * 0.015f), 0.25f, 0.75f, 0.1f, 1f), 0.1f, 1f)
                     val ix = x - dy / seg * l
                     val iy = y + dx / seg * l
                     if (cracks.none { inCrack(it, ix, iy) }) {

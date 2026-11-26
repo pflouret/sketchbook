@@ -56,7 +56,7 @@ The user commits themselves; don't commit unless asked.
 
 ## Ring ticks
 - `ticks(paths, spacing, length, cracks)`: short segments from each (clipped) ring line inwards (normal (-dy, dx), since ring polylines run by increasing angle),
-  every `tickSpacing` px of arc (±40% jitter), length `tickLength * random(0.6, 1)`; dropped if the inner end
+  every `tickSpacing` px of arc (±40% jitter), length `tickLength * map(noise(8000 + x*0.015, 8000 + y*0.015), 0.25, 0.75, 0.1, 1)` (2D Perlin over the canvas); dropped if the inner end
   is in a crack. Stored per ring as `RingLines.ticks` (x0,y0,x1,y1…), drawn with `beginShape(LINES)` in the
   ring's colour at weight 0.5. Computed after the cracks, so they don't change the rest of the random sequence.
 - Sliders: tick spacing 1–50 (6), tick length 0–10 (2.5; 0 = off). ~11k ticks on a 60-year tree at defaults.
