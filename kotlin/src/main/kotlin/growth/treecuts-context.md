@@ -54,6 +54,13 @@ The user commits themselves; don't commit unless asked.
   the two edges as one V-shaped open polyline. `Tree` now holds bark/strokes/cracks as polyline lists (no
   `center`; `drawRing` was removed).
 
+## Ring ticks
+- `ticks(paths, spacing, length, cracks)`: short segments from each (clipped) ring line inwards (normal (-dy, dx), since ring polylines run by increasing angle),
+  every `tickSpacing` px of arc (±40% jitter), length `tickLength * random(0.6, 1)`; dropped if the inner end
+  is in a crack. Stored per ring as `RingLines.ticks` (x0,y0,x1,y1…), drawn with `beginShape(LINES)` in the
+  ring's colour at weight 0.5. Computed after the cracks, so they don't change the rest of the random sequence.
+- Sliders: tick spacing 1–50 (6), tick length 0–10 (2.5; 0 = off). ~11k ticks on a 60-year tree at defaults.
+
 ## GUI (LazyGui)
 - `LazyGuiControlDelegate` properties; the delegate gained optional `min`/`max` for `slider`/`sliderInt`.
 - Sliders: diameter (0.1–1 of the canvas's shorter side, default 0.8; sets `maxR`), years, bark thickness, eccentricity, taper, ray spacing, noise octaves (1–8), noise falloff

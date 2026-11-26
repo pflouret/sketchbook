@@ -19,6 +19,8 @@ class TreeCuts : ProcessingAppK() {
     private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
     private var taper: Float by LazyGuiControlDelegate("slider", "", 0.7f, 0.2f, 1f)  // 1 = even ring widths, lower = wide young rings, narrow old ones
     private var raySpacing: Float by LazyGuiControlDelegate("slider", "", 14f, 3f, 100f)  // px of circumference per ray
+    private var tickSpacing: Float by LazyGuiControlDelegate("slider", "", 0.9f, 0.05f, 5f)  // px along the ring between ticks
+    private var tickLength: Float by LazyGuiControlDelegate("slider", "", 2.5f, 0f, 10f)  // px, 0 = no ticks
     private var noiseOctaves: Int by LazyGuiControlDelegate("sliderInt", "", 4, 1, 8)
     private var noiseFalloff: Float by LazyGuiControlDelegate("slider", "", 0.5f, 0f, 1f)  // weight of each next octave
 
@@ -26,11 +28,12 @@ class TreeCuts : ProcessingAppK() {
     private data class Params(
         val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
         val raySpacing: Float, val noiseOctaves: Int, val noiseFalloff: Float, val samples: Int,
-        val diameter: Float,
+        val diameter: Float, val tickSpacing: Float, val tickLength: Float,
     )
 
     private fun params() = Params(
         years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff, ringSamples, diameter,
+        tickSpacing, tickLength,
     )
     private var grownWith: Params? = null
 
@@ -53,7 +56,12 @@ class TreeCuts : ProcessingAppK() {
     private class Crack(val center: PVector, val angle: Float, val r0: Float, val r1: Float, val width: Float, val wander: Float, val id: Float)
 
     /** One year's ring, ready to stroke: open x, y polylines for the ring and its faint earlywood lines. */
-    private class RingLines(val latewood: Float, val lines: List<FloatArray>, val early: List<FloatArray>)
+    private class RingLines(
+        val latewood: Float,
+        val lines: List<FloatArray>,
+        val early: List<FloatArray>,
+        val ticks: FloatArray = floatArrayOf(),  // x0, y0, x1, y1 per tick across the ring line
+    )
 
     /** A medullary ray, active from year [start] to [end]. [id] keys its per-year noise. */
     private class Ray(val angle: Float, val start: Int, val end: Int, val id: Float)
@@ -85,6 +93,8 @@ class TreeCuts : ProcessingAppK() {
             stroke(0f, 90f + 140f * ring.latewood)
             strokeWeight(0.6f + 1.4f * ring.latewood)
             ring.lines.forEach(::drawPath)
+            strokeWeight(0.5f)
+            drawSegments(ring.ticks)
         }
         drawBark(tree)
         stroke(20f, 200f)
@@ -181,7 +191,10 @@ class TreeCuts : ProcessingAppK() {
         val cracks = growCracks(center, rings.last().average().toFloat(), outer, maxR)
         fun clip(paths: List<FloatArray>) = paths.flatMap { clipToCracks(it, cracks) }
         return Tree(
-            lines.map { RingLines(it.latewood, clip(it.lines), clip(it.early)) },
+            lines.map {
+                val ringLines = clip(it.lines)
+                RingLines(it.latewood, ringLines, clip(it.early), ticks(ringLines, params.tickSpacing, params.tickLength, cracks))
+            },
             clip(ringPolylines(center, inner, listOf())),
             clip(ringPolylines(center, outer, listOf())),
             clip(strokes.indices.step(4).map { strokes.copyOfRange(it, it + 4) }),
@@ -442,6 +455,48 @@ class TreeCuts : ProcessingAppK() {
             point(pts, to, ringAt(r, to))
             pts.toFloatArray()
         }
+    }
+
+    /** Separate line segments, x0, y0, x1, y1 each, in one shape. */
+    private fun drawSegments(s: FloatArray) {
+        if (s.isEmpty()) return
+        beginShape(LINES)
+        for (k in s.indices step 2) vertex(s[k], s[k + 1])
+        endShape()
+    }
+
+    /**
+     * Tiny ticks from the line inwards, perpendicular to it, every [spacing] px (jittered) of arc
+     * length. Ring polylines run by increasing angle, so (-dy, dx) points towards the ring's centre.
+     * Ticks that would reach into a crack are dropped.
+     */
+    private fun ticks(paths: List<FloatArray>, spacing: Float, length: Float, cracks: List<Crack>): FloatArray {
+        if (length <= 0f) return floatArrayOf()
+        val out = mutableListOf<Float>()
+        for (p in paths) {
+            var next = spacing * random(0.2f, 1f)  // distance along the path to the next tick
+            var travelled = 0f
+            for (k in 2 until p.size step 2) {
+                val dx = p[k] - p[k - 2]
+                val dy = p[k + 1] - p[k - 1]
+                val seg = mag(dx, dy)
+                if (seg == 0f) continue
+                while (next <= travelled + seg) {
+                    val t = (next - travelled) / seg
+                    val x = p[k - 2] + dx * t
+                    val y = p[k - 1] + dy * t
+                    val l = length * random(0.6f, 1f)
+                    val ix = x - dy / seg * l
+                    val iy = y + dx / seg * l
+                    if (cracks.none { inCrack(it, ix, iy) }) {
+                        out.add(x); out.add(y); out.add(ix); out.add(iy)
+                    }
+                    next += spacing * random(0.6f, 1.4f)
+                }
+                travelled += seg
+            }
+        }
+        return out.toFloatArray()
     }
 
     private fun drawPath(p: FloatArray) = withShape { for (k in p.indices step 2) vertex(p[k], p[k + 1]) }
