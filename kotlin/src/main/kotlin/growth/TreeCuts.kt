@@ -13,7 +13,7 @@ class TreeCuts : ProcessingAppK() {
     private var ringSamples: Int by LazyGuiControlDelegate("sliderInt", "", 400, 10, 800)  // points per ring
     /** Points per ring of the tree being grown; set from [ringSamples] in regrow(), on the draw thread. */
     private var samples = 720
-    private var diameter: Float by LazyGuiControlDelegate("slider", "", 0.99f, 0.1f, 2f)  // trunk size, fraction of the canvas's shorter side
+    private var zoom: Float by LazyGuiControlDelegate("slider", "", 0.99f, 0.1f, 2f)  // trunk size, fraction of the canvas's shorter side
     private var years: Int by LazyGuiControlDelegate("sliderInt", "", 60, 1, 100)
     private var barkThickness: Float by LazyGuiControlDelegate("slider", "", 0.01f, 0.01f, 0.1f)  // fraction of the trunk radius
     private var eccentricity: Float by LazyGuiControlDelegate("slider", "", 0f, 0f, 1f)
@@ -28,11 +28,11 @@ class TreeCuts : ProcessingAppK() {
     private data class Params(
         val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
         val raySpacing: Float, val noiseOctaves: Int, val noiseFalloff: Float, val samples: Int,
-        val diameter: Float, val tickSpacing: Float, val tickLength: Float,
+        val zoom: Float, val tickSpacing: Float, val tickLength: Float,
     )
 
     private fun params() = Params(
-        years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff, ringSamples, diameter,
+        years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff, ringSamples, zoom,
         tickSpacing, tickLength,
     )
     private var grownWith: Params? = null
@@ -135,7 +135,7 @@ class TreeCuts : ProcessingAppK() {
         val center = PVector(w2 + random(-30, 30), h2 + random(-30, 30))
         val piths = (1 + random(3).toInt()).let { if (years < 4) 1 else it }
         val latewood = FloatArray(years + 1)
-        val maxR = min(width, height) * params.diameter / 2
+        val maxR = min(width, height) * params.zoom / 2
         var widths = yearWidths(maxR * (1 - barkThickness), years, taper, latewood)
         val lean0 = random(TWO_PI)
         val lines = mutableListOf<RingLines>()

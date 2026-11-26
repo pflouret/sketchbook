@@ -63,7 +63,7 @@ The user commits themselves; don't commit unless asked.
 
 ## GUI (LazyGui)
 - `LazyGuiControlDelegate` properties; the delegate gained optional `min`/`max` for `slider`/`sliderInt`.
-- Sliders: diameter (0.1–1 of the canvas's shorter side, default 0.8; sets `maxR`), years, bark thickness, eccentricity, taper, ray spacing, noise octaves (1–8), noise falloff
+- Sliders: zoom (trunk diameter as a fraction of the canvas's shorter side; sets `maxR`), years, bark thickness, eccentricity, taper, ray spacing, noise octaves (1–8), noise falloff
   (0–1), ring samples (10–800). The user has edited some ranges/defaults; check the file.
 - The rays/earlywood toggles were removed; both are always drawn.
 - Taper slider step is 0.01 via the new `gui.sliderPrecision(path, step)` in `gui/LazyGuiExtension.kt`
