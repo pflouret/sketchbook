@@ -26,14 +26,23 @@ class TreeCuts : ProcessingAppK() {
 
     /** The parameters that need a regrow, read from the gui once per frame. */
     private data class Params(
-        val years: Int, val barkThickness: Float, val eccentricity: Float, val taper: Float,
-        val raySpacing: Float, val noiseOctaves: Int, val noiseFalloff: Float, val samples: Int,
-        val zoom: Float, val tickSpacing: Float, val tickLength: Float,
+        val years: Int, val zoom: Float, val samples: Int, val eccentricity: Float,
+        val taper: Float, val tickSpacing: Float, val tickLength: Float, val raySpacing: Float,
+        val barkThickness: Float, val noiseOctaves: Int, val noiseFalloff: Float,
     )
 
     private fun params() = Params(
-        years, barkThickness, eccentricity, taper, raySpacing, noiseOctaves, noiseFalloff, ringSamples, zoom,
-        tickSpacing, tickLength,
+        years,
+        zoom,
+        ringSamples,
+        eccentricity,
+        taper,
+        tickSpacing,
+        tickLength,
+        raySpacing,
+        barkThickness,
+        noiseOctaves,
+        noiseFalloff,
     )
     private var grownWith: Params? = null
 
@@ -131,7 +140,7 @@ class TreeCuts : ProcessingAppK() {
     }
 
     private fun grow(params: Params): Tree {
-        val (years, barkThickness, eccentricity, taper) = params
+        val (years, zoom1, samples1, eccentricity, taper, tickSpacing1, tickLength1, raySpacing1, barkThickness) = params
         val center = PVector(w2 + random(-30, 30), h2 + random(-30, 30))
         val piths = (1 + random(3).toInt()).let { if (years < 4) 1 else it }
         val latewood = FloatArray(years + 1)
