@@ -41,7 +41,7 @@ The user commits themselves; don't commit unless asked.
   that miss every stem are interpolated, leaving a straight-edged gap that shows as a white sliver in some
   3-pith seeds). It is ring 0 (not drawn) of the shared rings for the remaining years.
 - `overlapCuts`: a stem's ring is cut where it runs into another stem's same-year ring.
-- `Tree(center, rings: List<RingLines(latewood, lines, early)>, innerBark, outerBark, barkStrokes)`.
+- `Tree(rings: List<RingLines(latewood, lines, early, ticks)>, innerBark, outerBark, cracks)`; the bark strokes (radial hatching in the bark) were removed.
 - The pith-count `random()` call changed the random sequence: seeds from before it give different trees.
 
 ## Drying cracks (`growCracks`, last in the random sequence)
@@ -51,7 +51,7 @@ The user commits themselves; don't commit unless asked.
   `wander = 20 * maxR/400` px plus a fine zigzag).
 - `clipToCracks` removes the inside parts of every ring, earlywood, bark line and bark stroke, bisecting
   crossings so pieces end exactly on the edges (closed rings cut once stay one piece). `crackOutline` draws
-  the two edges as one V-shaped open polyline. `Tree` now holds bark/strokes/cracks as polyline lists (no
+  the two edges as one V-shaped open polyline. `Tree` now holds bark/cracks as polyline lists (no
   `center`; `drawRing` was removed).
 
 ## Ring ticks
@@ -60,6 +60,13 @@ The user commits themselves; don't commit unless asked.
   is in a crack. Stored per ring as `RingLines.ticks` (x0,y0,x1,y1…), drawn with `beginShape(LINES)` in the
   ring's colour at weight 0.5. Computed after the cracks, so they don't change the rest of the random sequence.
 - Sliders: tick spacing 1–50 (6), tick length 0–10 (2.5; 0 = off). ~11k ticks on a 60-year tree at defaults.
+
+## Layered SVG export
+- `exportLayeredSvg(tree)`, key `L` or the gui `export layers` button. Writes by hand (not the Processing
+  recorder) to `~/Genart/sketchout/treecuts/treecuts_<date>_<frame>_layers.svg`: top-level
+  `<g inkscape:groupmode="layer">` groups (Inkscape and vpype layers) "1 earlywood", "2 latewood" (the ring
+  lines), "3 ticks", "4 bark" (inner + outer lines), "5 cracks"; polylines as `<path d="M… L…">`, ticks as one multi-subpath path per
+  ring; canvas px coordinates, 2 decimals. (An earlier version with hatched latewood bands was reverted.)
 
 ## GUI (LazyGui)
 - `LazyGuiControlDelegate` properties; the delegate gained optional `min`/`max` for `slider`/`sliderInt`.

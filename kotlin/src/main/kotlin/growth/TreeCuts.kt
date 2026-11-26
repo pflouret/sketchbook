@@ -54,7 +54,6 @@ class TreeCuts : ProcessingAppK() {
         val rings: List<RingLines>,  // the separate stems' rings, then the shared ones
         val innerBark: List<FloatArray>,  // open x, y polylines, like everything below
         val outerBark: List<FloatArray>,
-        val barkStrokes: List<FloatArray>,
         val cracks: List<FloatArray>,
     )
 
@@ -72,10 +71,12 @@ class TreeCuts : ProcessingAppK() {
         val ticks: FloatArray = floatArrayOf(),  // x0, y0, x1, y1 per tick across the ring line
     )
 
+    private var exportLayers: Boolean by LazyGuiControlDelegate("button")
+
     /** A medullary ray, active from year [start] to [end]. [id] keys its per-year noise. */
     private class Ray(val angle: Float, val start: Int, val end: Int, val id: Float)
 
-    @Volatile private var tree = Tree(listOf(), listOf(), listOf(), listOf(), listOf())
+    @Volatile private var tree = Tree(listOf(), listOf(), listOf(), listOf())
 
     override fun settings() {
         size(SIZE.width, SIZE.height, P2D)
@@ -92,6 +93,7 @@ class TreeCuts : ProcessingAppK() {
     override fun draw() {
         val params = params()
         if (params != grownWith) regrow(params)
+        if (exportLayers) exportLayeredSvg(tree)
         background(255)
         noFill()
         val tree = tree
@@ -116,10 +118,6 @@ class TreeCuts : ProcessingAppK() {
         stroke(60f, 35f, 15f, 160f)
         strokeWeight(1f)
         tree.innerBark.forEach(::drawPath)
-
-        stroke(45f, 25f, 10f, 190f)
-        strokeWeight(1.1f)
-        tree.barkStrokes.forEach(::drawPath)
 
         stroke(30f, 15f, 5f)
         strokeWeight(2.2f)
@@ -195,7 +193,7 @@ class TreeCuts : ProcessingAppK() {
             rings.add(growRing(rings.last(), i, widths[i], eccentricity, lean, 0f))
         }
         val rays = growRays(rings, params.raySpacing, 6000f)
-        val (inner, outer, strokes) = growBark(center, rings.last(), maxR * barkThickness)
+        val (inner, outer) = growBark(rings.last(), maxR * barkThickness)
         lines += cutRings(center, rings, inner, rays, stemYears, latewood)
         val cracks = growCracks(center, rings.last().average().toFloat(), outer, maxR)
         fun clip(paths: List<FloatArray>) = paths.flatMap { clipToCracks(it, cracks) }
@@ -206,7 +204,6 @@ class TreeCuts : ProcessingAppK() {
             },
             clip(ringPolylines(center, inner, listOf())),
             clip(ringPolylines(center, outer, listOf())),
-            clip(strokes.indices.step(4).map { strokes.copyOfRange(it, it + 4) }),
             cracks.map { crackOutline(it, outer) },
         )
     }
@@ -320,7 +317,7 @@ class TreeCuts : ProcessingAppK() {
      * A thin pale inner bark right outside the last ring, then a thick outer bark whose thickness
      * comes from |2n - 1| noise: wide plateaus with sharp V-shaped fissures where n crosses 0.5.
      */
-    private fun growBark(center: PVector, cambium: FloatArray, thickness: Float): Triple<FloatArray, FloatArray, FloatArray> {
+    private fun growBark(cambium: FloatArray, thickness: Float): Pair<FloatArray, FloatArray> {
         val inner = FloatArray(samples) { j ->
             val a = TWO_PI * j / samples
             cambium[j] + thickness * (0.12f + 0.1f * noise(100 + cos(a) * 3f, 100 + sin(a) * 3f))
@@ -334,20 +331,7 @@ class TreeCuts : ProcessingAppK() {
             inner[j] + max(1.5f, thickness * swell * sqrt(fissure))
         }, 1)
 
-        // fibrous radial strokes across the outer bark, slightly ragged at both ends
-        val strokes = FloatArray(samples / 2 * 4)
-        for (k in 0 until samples / 2) {
-            val j = k * 2
-            val a = TWO_PI * j / samples + random(-0.002f, 0.002f)
-            val band = outer[j] - inner[j]
-            val r0 = inner[j] + band * random(0f, 0.15f)
-            val r1 = outer[j] - band * random(0f, 0.1f)
-            strokes[k * 4] = center.x + r0 * cos(a)
-            strokes[k * 4 + 1] = center.y + r0 * sin(a)
-            strokes[k * 4 + 2] = center.x + r1 * cos(a)
-            strokes[k * 4 + 3] = center.y + r1 * sin(a)
-        }
-        return Triple(inner, outer, strokes)
+        return inner to outer
     }
 
     /**
@@ -464,6 +448,62 @@ class TreeCuts : ProcessingAppK() {
             point(pts, to, ringAt(r, to))
             pts.toFloatArray()
         }
+    }
+
+    /**
+     * Writes the tree as an SVG with one Inkscape layer (a top-level group, which vpype also reads as
+     * a layer) per part, to plot each with its own pen: earlywood lines, latewood (the ring lines),
+     * ticks, bark and cracks. Coordinates are canvas px, like the `R` export.
+     */
+    private fun exportLayeredSvg(tree: Tree) {
+        val sb = StringBuilder()
+        fun n(v: Float) = (Math.round(v * 100) / 100f).toString()
+        fun polylines(paths: List<FloatArray>) {
+            for (p in paths) {
+                if (p.size < 4) continue
+                sb.append("<path d=\"M")
+                for (k in p.indices step 2) {
+                    if (k > 0) sb.append(" L")
+                    sb.append(n(p[k])).append(' ').append(n(p[k + 1]))
+                }
+                sb.append("\"/>\n")
+            }
+        }
+        // many short segments, x0, y0, x1, y1 each: one path with a subpath per segment
+        fun segments(s: FloatArray) {
+            if (s.isEmpty()) return
+            sb.append("<path d=\"")
+            for (k in s.indices step 4) {
+                sb.append("M").append(n(s[k])).append(' ').append(n(s[k + 1]))
+                    .append(" L").append(n(s[k + 2])).append(' ').append(n(s[k + 3])).append(' ')
+            }
+            sb.append("\"/>\n")
+        }
+        var id = 0
+        fun layer(name: String, weight: Float, body: () -> Unit) {
+            id++
+            sb.append("<g inkscape:groupmode=\"layer\" inkscape:label=\"$id $name\" id=\"layer$id\" ")
+                .append("style=\"fill:none;stroke:#000;stroke-width:$weight;stroke-linecap:round;stroke-linejoin:round\">\n")
+            // the layer's paths go in one plain group inside it, so they move/select together
+            sb.append("<g id=\"$name\">\n")
+            body()
+            sb.append("</g>\n</g>\n")
+        }
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+            .append("<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\" ")
+            .append("width=\"${width}px\" height=\"${height}px\" viewBox=\"0 0 $width $height\">\n")
+        layer("earlywood", 0.5f) { tree.rings.forEach { polylines(it.early) } }
+        layer("latewood", 1f) { tree.rings.forEach { polylines(it.lines) } }
+        layer("ticks", 0.5f) { tree.rings.forEach { segments(it.ticks) } }
+        layer("bark", 1f) {
+            polylines(tree.innerBark)
+            polylines(tree.outerBark)
+        }
+        layer("cracks", 1f) { polylines(tree.cracks) }
+        sb.append("</svg>\n")
+        val file = makeSketchFilename("%s_####_layers.svg")
+        java.io.File(file).writeText(sb.toString())
+        println(file)
     }
 
     /** Separate line segments, x0, y0, x1, y1 each, in one shape. */
@@ -670,6 +710,10 @@ class TreeCuts : ProcessingAppK() {
             '8' -> barkThickness = min(0.3f, barkThickness + 0.01f)
             '9' -> raySpacing = max(3f, raySpacing - 2f)
             '0' -> raySpacing = min(100f, raySpacing + 2f)
+            'L' -> {
+                exportLayeredSvg(tree)
+                return
+            }
             else -> return
         }
         // draw() regrows on the next frame when a parameter changed
